@@ -1,0 +1,348 @@
+
+''' Functions
+
+Summary:
+    This file contains
+
+Example:
+    Usage of
+
+Todo:
+    *
+'''
+
+
+
+''' Imports '''
+
+# data array handling
+import numpy as np
+
+# savitzky-golay filter
+from scipy.signal import savgol_filter
+
+
+
+''' Core Calculation Functions '''
+
+def calc_doping_density(_data, _params):
+
+    ''' Calculate Doping Density
+
+        Calculate wafer doping density from wafer resistance; ref: Sinton Instruments
+
+    Args:
+        _data (dict): measurement node data
+        _params (dict): required measurement node parameters
+
+    Returns:
+        dict: calculated derivative data
+    '''
+
+    # unpack required data and parameters
+    wafer_res = _params['wafer_resistivity']
+    wafer_type = _params['wafer_doping_type']
+
+
+    # select coefficients by wafer type
+    if wafer_type == 'n-type':
+        a = [-6.34661e-4, 8.20326e-4, 0.01243, 0.04571, 0.07246, 1.07969, 15.69691]
+    elif wafer_type == 'p-type':
+        a = [-6.543e-4, 7.54055e-4, 0.0093332, 0.03469, 0.06473, 1.08286, 16.17944]
+
+    # calculate wafer doping density
+    wafer_doping = 10**( a[0] * np.log10(wafer_res)**6 + a[1] * np.log10(wafer_res)**5 +
+                         a[2] * np.log10(wafer_res)**4 - a[3] * np.log10(wafer_res)**3 +
+                         a[4] * np.log10(wafer_res)**2 - a[5] * np.log10(wafer_res) + a[6] )
+
+
+    # return calculation results
+    return {'wafer_doping_density': wafer_doping}
+
+
+
+def calc_charge_density(_data, _params):
+
+    ''' Calculate Charge Density
+
+        Calculate charge density as a function of time from measured photoconductance; ref: Dannhauser + Krausse Model
+
+    Args:
+        _data (dict): measurement node data
+        _params (dict): required measurement node parameters
+
+    Returns:
+        dict: calculated derivative data
+    '''
+
+    # unpack required data and parameters
+    wafer_doping = _data['wafer_doping_density']
+    conductance = _data['conductance']
+
+    wafer_thick = _params['wafer_thickness']
+
+
+    # calculate initial estimate of charge density
+    n_0 = conductance / (wafer_thick * 1700 * 1.6e-19)
+
+    # refine charge density calculation
+    n_1 = ( n_0 * 1700 / ( 1800 * (1 + 10**( 0.8431 * np.log10( (n_0 + wafer_doping) / 1.2e18 ) )) /
+                                  (1 + 8.36 * 10**(0.8431 * np.log10( (n_0 + wafer_doping) / 1.2e18 )))) )
+
+    # calculate apparent charge density
+    charge_density = ( n_1 * (1800 * (1 + 10**(0.8431 * np.log10((n_0 + wafer_doping) / 1.2E+18))) /
+                                     (1 + 8.36 * 10**(0.8431 * np.log10((n_0 + wafer_doping) / 1.2e18)))) /
+                             (1800 * (1 + 10**(0.8431 * np.log10((n_1 + wafer_doping) / 1.2e18))) /
+                                     (1 + 8.36 * 10**(0.8431 * np.log10((n_1 + wafer_doping) / 1.2e18)))) )
+
+
+    # return calculation results
+    return {'charge_density': charge_density}
+
+
+
+def calc_charge_generation(_data, _params):
+
+    ''' Calculate Charge Generation
+
+        Calculate charge generation as a function of time from illumination intensity; ref: Sinton Instruments
+
+    Args:
+        _data (dict): measurement node data
+        _params (dict): required measurement node parameters
+
+    Returns:
+        dict: calculated derivative data
+    '''
+
+    # unpack required data and parameters
+    illumination = _data['illumination']
+
+    wafer_optical_const = _params['wafer_optical_const']
+
+
+    # calculate incident photon density (adjusted for optical constant)
+    charge_generation = illumination * wafer_optical_const
+
+
+    # return calculation results
+    return {'charge_generation': charge_generation}
+
+
+
+def calc_lifetime(_data, _params):
+
+    ''' Calculate Lifetime
+
+        Calculate minority charge carrier lifetime as a function of time from charge density derivative; ref: Sinton
+        Instruments
+
+    Args:
+        _data (dict): measurement node data
+        _params (dict): required measurement node parameters
+
+    Returns:
+        dict: calculated derivative data
+    '''
+
+    # unpack required data and parameters
+    charge_density = _data['charge_density']
+    time = _data['time']
+    charge_generation = _data['charge_generation']
+
+    wafer_thick = _params['wafer_thickness']
+    illumination_mode = _params['illumination_mode']
+
+
+    ## calculate derevative of charge density with respect to time
+
+    # get sampling rate (s)
+    sample_rate = time.ptp() / (time.shape[0] - 1)
+
+    # apply savitzky-golay filter with minimal smoothing, obtain derivative, adjust for sameple rate
+    charge_density_deriv = savgol_filter(charge_density, window_length = 21, polyorder = 3, deriv = 1) / sample_rate
+
+
+    ## calculate minority carrier lifetime by measurement illumination mode
+
+    # for generalised illumination mode
+    if illumination_mode == 'gen':
+        lifetime = (charge_density * wafer_thick) / (charge_generation - (wafer_thick * charge_density_deriv))
+
+    # for transient illumination mode
+    elif illumination_mode == 'trans':
+        lifetime = -charge_density / charge_density_deriv
+
+
+    # return calculation results
+    return {'lifetime': lifetime}
+
+
+
+def calc_implied_suns(_data, _params):
+
+    ''' Calculate Implied Suns
+
+        Calculate implied suns as a function of time; ref: Sinton Instruments
+
+    Args:
+        _data (dict): measurement node data
+        _params (dict): required measurement node parameters
+
+    Returns:
+        dict: calculated derivative data
+    '''
+
+    # unpack required data and parameters
+    charge_density = _data['charge_density']
+    lifetime = _data['lifetime']
+
+    wafer_thick = _params['wafer_thickness']
+    wafer_optical_const = _params['wafer_optical_const']
+
+
+    # calculate implied suns
+    implied_suns = ( charge_density * wafer_thick * 1.602e-19 / (0.038 * wafer_optical_const * lifetime) )
+
+
+    # return calculation results
+    return {'implied_suns': implied_suns}
+
+
+
+def calc_implied_voc(_data, _params):
+
+    ''' Calculate Implied Voc ### WIP ###
+
+        Calculate Richter implied Voc as a function of time; ref: Sinton Instruments
+
+        ## n_i from Altermatt, Sproul and Schenk
+
+        # Equilibrium minority carrier density calculated with Boltzmann-Stats using BGN-Model of Schenk.
+
+    Args:
+        _data (dict): measurement node data
+        _params (dict): required measurement node parameters
+
+    Returns:
+        dict: calculated derivative data
+    '''
+
+    # unpack required data and parameters
+    charge_density = _data['charge_density']
+
+    wafer_doping = _data['wafer_doping_density']
+
+    ## need equilibrium charge density (n_i) and temperature
+    #equil_density = _data['equil_density']
+    temperature = _params['temperature']
+    equil_density = 9.69e9
+
+
+    # calculate implied Voc
+    implied_voc = ( (1.381e-23 * temperature / 1.602e-19) *
+            np.log(charge_density * (wafer_doping + charge_density) / (equil_density**2)) )
+
+
+    # return calculation results
+    return {'implied_voc': implied_voc}
+
+
+
+''' Data Processing Functions '''
+
+def process_standard(_db, _index):
+
+    ''' Standard Sinton Lifetime Measurement Data Processsing
+
+        Process imported sinton lifetime data, incorporate required experimental / device parameters; yield charge
+        density and lifetime, doping density and implied suns
+
+    Args:
+        _db (dict): database instance
+        _index (int): measurement node index within database instance measurement list
+
+    Returns:
+        dict: calculated derivative data
+    '''
+
+    # get measurement node
+    node = _db['measurement'][_index]
+
+    # get measurement data from measurement data node
+    data = node['data']
+
+    # get measurement data node parameters
+    params = node['params']
+
+
+    # get device state node from measurement node relation
+    device_state = _db['device_state'][node['rels']['device_state'][0]]
+
+    # append device state parameters
+    params = {**params, **device_state['params']}
+
+
+    # get device node from measurement node relation
+    device = _db['device'][node['rels']['device'][0]]
+
+    # append device state parameters
+    params = {**params, **device['params']}
+
+
+    ## use data and params to calculate each derivative data and parameters
+
+    # calculate wafer doping density, append results to data dict
+    data = { **data, **calc_doping_density(_data = data, _params = params) }
+
+
+    # calculate apparent charge density, append results to data dict
+    data = { **data, **calc_charge_density(_data = data, _params = params) }
+
+
+    # calculate charge generation, append results to data dict
+    data = { **data, **calc_charge_generation(_data = data, _params = params) }
+
+
+    # calculate lifetime, append results to data dict
+    data = { **data, **calc_lifetime(_data = data, _params = params) }
+
+
+    # calculate implied suns, append results to data dict
+    data = { **data, **calc_implied_suns(_data = data, _params = params) }
+
+
+    # calculate implied voc, append results to data dict
+    #data = { **data, **calc_implied_voc(_data = data, _params = params) }
+
+
+    # return calculated results
+    return data
+
+
+
+def process_sinton_lifetime(_db, _index, _process):
+
+    ''' Process Sinton Lifetime Measurement Data
+
+        Process imported sinton lifetime data, incorporate required experimental / device parameters; yield charge
+        density and lifetime, doping density and implied suns
+
+    Args:
+        _db (dict): database instance
+        _index (int): measurement node index within database instance measurement list
+        _process (dict): measurement and process type details
+
+    Returns:
+        dict: calculated derivative data
+    '''
+
+    # process sinton lifetime measurement data
+    if _process['process'] == 'standard':
+
+        # perform standard sinton lifetime measurement data processsing
+        data = process_standard(_db = _db, _index = _index)
+
+
+        # return calculated results
+        return data

@@ -1,0 +1,46 @@
+
+
+
+Develop additional node types (device, experiment, ...) and test relational mapping and search
+
+
+###
+### update process file to enable import template extract multiple measurements from single file
+### parse functions return list of nodes to add
+### add function returns list of node indicies
+###
+
+
+
+Include graceful exception handling and partial file import with comments upon failure
+
+    in particular, spline fit for charge density derivative in sinton lifetime data processing is unstable
+
+
+
+Impliment additional data sources (measurement types, file formats)
+
+
+    current-voltage
+
+        parse data files (HALM, WaveLabs)
+
+        calculate parameters from data (jsc, voc, ff, eta, mpp, rs, rp)
+
+
+    lifetime
+
+        parse data files (sinton lifetime, both xlsm and ltr)
+
+        calculate lifetime from raw photovoltage decay
+
+        model charge density versus lifetime with detailed model to extract fitting component parameters
+
+
+    photoluminescence imaging
+
+        parse data files (tiff, png)
+
+        process images (edge alignment, apply psf)
+
+        implied Voc map

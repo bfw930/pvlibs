@@ -1,0 +1,85 @@
+
+
+# sample state
+# independent variables
+# dependent variables (relative to index variable)
+
+# e.g. index time / photo-conductance / charge density
+# derivative calculations using independent variables and dependent variable
+
+
+
+
+
+# data node
+## meta - details of processes performed, data contained, relations to other nodes
+## vars - independent state variables
+## data - dependent state variables
+
+
+### state (inpependent)
+    ## wafer state variables
+        # wafer parameters (dimensions, doping densities, diffusions and surface layers)
+        # temperature dependent wafer parameters (intrinsic properties)
+
+### environment state (variable)
+    ## measurement data variables
+        # invariant measurement parameters (temperature)
+        # variable measurement parameters (time, illumination intensity)
+            # measured dependent variable response (photoconductance)
+
+### model (derivative, dependent)
+    ## state in environment
+        # invariant inputs
+        # variable inputs
+            # dependent variable
+                # dependent results
+
+
+# static variables - names and values
+# dynamic variable - name, values as index array
+# dependent variables - headers, values as array aligned to index
+
+
+## hierarchy of dependencies, independent variables (constants), state variables (variable or environment dependent), derivative state values
+
+# complete list top level variables (dimensions), stateless
+    # select state, subset of variables, select single dynamic dependent variable, fixed value of remaining static variables
+        # calculate derivative dependent variables for state
+
+
+#
+# for given state as dict:
+    # static: dict of independent state variables each as name:value
+    # dynamic: dict of dependent variables each as name: (value)
+        # each entry value as dict with:
+            # 'headers': names (list) for each values array
+            # 'data': values as 2d array with dependent variable as index values
+
+
+
+# node
+    # params: state description (id, tags), metadata (data source, processes performed), searchable details (key and value)
+    # rels: relations to other nodes (relation name, related node type, related node index)
+    # data: state data including: input static variables, dynamic variables with derivative dependent variable values,
+        # model output static variables
+
+
+
+
+
+# sample variables: 'wafer_doping_type', 'wafer_resistivity', 'wafer_thickness', 'wafer_area', 'wafer_optical_const',
+# calculate 'wafer_doping_density' from 'wafer_doping_type', 'wafer_resistivity'
+
+# measurement variables: 'illumination_mode', 'time', 'conductance', 'illumination'
+# calculate 'charge_generation' from 'illumination', 'wafer_optical_const'
+# calculate 'charge_density' from 'wafer_doping_density', 'conductance', 'wafer_thickness'
+# calculate 'lifetime' from 'charge_density', ('illumination_mode', 'time', 'charge_generation', 'wafer_thickness')
+# calculate 'implied_suns' from 'charge_density', 'lifetime', 'wafer_thickness', 'wafer_optical_const'
+
+# state variables: 'temperature'
+# calculate 'intrinsic_carrier_density' from 'temperature', 'wafer_doping_density'
+
+# calculate 'effective_intrinsic_carrier_density' from 'intrinsic_carrier_density', 'charge_density'
+# calculate 'implied_voc' from 'charge_density', 'wafer_doping_density', 'effective_intrinsic_carrier_density', 'temperature'
+

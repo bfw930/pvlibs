@@ -1,0 +1,701 @@
+
+''' Functions
+
+Summary:
+    This file contains
+
+Example:
+    Usage of
+
+Todo:
+    *
+
+'''
+
+
+
+''' Imports '''
+
+# data array handling
+import numpy as np
+
+# optimisation functions
+from scipy import optimize
+
+
+# lifetime model functions
+from . import models
+
+
+
+''' Core Calculation Functions '''
+
+def get_intr(_params):
+
+    ''' Get Effective Intrinsic Parameters
+
+        Calculate and return intrinsic silicon parameters dependent only on temperature; band density of states,
+        intrinsic bandgap, intrinsic carrier concentration
+
+    Args:
+        dict: required parameters for calculations
+
+            T (float): temperature [K]
+
+    Returns:
+        dict: calculated intrinsic parameters for given temperature
+
+            N_c_i (float): effective intrinsic conduction band density of states [ / cm^3]
+            N_v_i (float): effective intrinsic valance band density of states [ / cm^3]
+            E_g_i (float): effective intrinsic bandgap [eV]
+            E_c_i (float): effective intrinsic conduction band energy relative to intrinsic Fermi level [eV]
+            E_v_i (float): effective intrinsic valance band energy relative to intrinsic Fermi level [eV]
+            n_i (float): effective intrinsic carrier density [ / cm^3]
+    '''
+
+    # unpack required parameters
+    T = _params['T']
+
+
+    # calculate intrinsic thermal velocity of electrons, holes  [cm / s]
+    #v_th_e, v_th_h = models.calc_v_th(_T = T)
+
+
+    # calculate effective conduction, valance band density of states [ / cm^3]
+    N_c_i, N_v_i = models.calc_N_i(_T = T)
+
+
+    # calculate effective intrinsic bandgap [eV]
+    E_g_i = models.calc_E_g_i(_T = T)
+
+
+    # calculate effective intrinsic carrier density [ / cm^3]
+    n_i = models.calc_n_i(_N_c_i = N_c_i, _N_v_i = N_v_i, _E_g_i = E_g_i, _T = T)
+
+
+    # calculate effective intrinsic Fermi level and conduction, valance band energy [eV]
+    E_f_i, E_c_i, E_v_i = models.calc_E_f_i(_N_c_i = N_c_i, _N_v_i = N_v_i, _E_g_i = E_g_i, _T = T)
+
+
+    # return calculated parameters
+    return {'N_c_i': N_c_i, 'N_v_i': N_v_i, 'E_g_i': E_g_i, 'n_i': n_i , 'E_f_i': E_f_i, 'E_c_i': E_c_i,
+        'E_v_i': E_v_i} # 'v_th_e': v_th_e, 'v_th_h': v_th_h
+
+
+
+def iter_equil_calc(_n_i, _T, _N_D, _N_A, _E_c_i, _E_v_i, _N_c_i, _N_v_i, _n_i_0):
+
+    ''' Calculate Equilibrium Intrinsic Carrier Concentration through Iteration
+
+    Args:
+        _n_i (float): effective intrinsic carrier concentration [ / cm^-3]
+        _T (float): temperature [K]
+        _N_D (float): donor doping concentration [ / cm^-3]
+        _N_A (float): acceptor doping concentration [ / cm^-3]
+        _E_c_i (float): intrinsic conduction band energy relative to intrinsic Fermi level [eV]
+        _E_v_i (float): intrinsic valance band energy relative to intrinsic Fermi level [eV]
+        _N_c_i (float): intrinsic conduction band density of states [ / cm^3]
+        _N_v_i (float): intrinsic valance band density of states [ / cm^3]
+        _n_i_0 (float): effective equilibrium intrinsic carrier concentration [ / cm^-3]
+
+    Returns:
+        n_0 (float): equilibrium electron concentration [ / cm^-3]
+        p_0 (float): equilibrium hole concentration [ / cm^-3]
+        E_f_0 (float): equilibrium Fermi level energy [eV]
+        dE_g_0 (float): total shift in bandgap energy due to narrowing at equilibrium[eV]
+        dE_c_0 (float): equilibrium shift in conduction band energy due to bandgap narrowing [eV]
+        dE_v_0 (float): equilibrium shift in valance band energy due to bandgap narrowing [eV]
+        gamma_BGN_0 (float): bandgap narrowing correction factor at equilibrium [ ]
+        gamma_degen_0 (float): bandgap narrowing correction factor at equilibrium [ ]
+        n_i_0 (float): effective equilibrium intrinsic carrier concentration [ / cm^-3]
+    '''
+
+    # calculate equilibrium electron, hole concentration [ / cm^-3], zero excess charge density
+    n_0, p_0 = models.calc_np(_N_D = _N_D, _N_A = _N_A, _dn = 0, _dp = 0, _n_i = _n_i_0)
+
+
+    # calculate shift in conduction, valance band energy due to bandgap narrowing [eV]
+    dE_g_0, dE_c_0, dE_v_0 = models.calc_dE_bgn(_N_D = _N_D, _N_A = _N_A, _n = n_0, _p = p_0, _T = _T)
+
+
+    # calculate equilibrium bandgap narrowing correction factor [ ]
+    gamma_bgn_0 = models.calc_gamma_bgn_0(_N_c_i = _N_c_i, _N_v_i = _N_v_i, _n_0 = n_0, _p_0 = p_0, _T = _T,
+        _dE_c_0 = dE_c_0, _dE_v_0 = dE_v_0)
+
+
+    # adjust intrinsic conduction, valance band energy due to bandgap narrowing
+    E_c_0 = _E_c_i - dE_c_0
+    E_v_0 = _E_v_i + dE_v_0
+
+
+    # calculate equilibrium fermi level energy [eV]
+    E_f_0 = models.calc_E_f_0(_E_c_0 = E_c_0, _E_v_0 = E_v_0, _n_0 = n_0, _p_0 = p_0, _T = _T, _N_c_i = _N_c_i,
+        _N_v_i = _N_v_i)
+
+
+    # using equivalent electron/hole fermi level, calculate equilibrium degeneracy factor [ ]
+    gamma_degen_0 = models.calc_gamma_degen(_E_c = E_c_0, _E_v = E_v_0, _E_f_n = E_f_0, _E_f_p = E_f_0, _T = _T)
+
+
+    # update effective intrinsic carrier concentration
+    n_i_0 = ((_n_i**2) * gamma_bgn_0 * gamma_degen_0)**(0.5)
+
+
+    # return calculated parameters
+    return n_0, p_0, dE_g_0, dE_c_0, dE_v_0, E_c_0, E_v_0, E_f_0, gamma_bgn_0, gamma_degen_0, n_i_0
+
+
+
+def get_equil(_params, _intr):
+
+    ''' Get Equilibrium Parameters
+
+        Calculate equilibrium parameters dependent on doping density and excess carrier densities; effective
+        electron, hole carrier concentrations; iterate for convergence of effective intrinsic carrier density
+
+    Args:
+        _params (dict): required parameters for calculations
+
+            T (float): temperature [K]
+            N_D (float): donor doping concentration [ / cm^-3]
+            N_A (float): acceptor doping concentration [ / cm^-3]
+            n_i (float): intrinsic carrier concentration [ / cm^-3]
+            N_c_i (float): intrinsic conduction band density of states [ / cm^3]
+            N_v_i (float): intrinsic valance band density of states [ / cm^3]
+            E_c_i (float): intrinsic conduction band energy relative to intrinsic Fermi level [eV]
+            E_v_i (float): intrinsic valance band energy relative to intrinsic Fermi level [eV]
+
+    Returns:
+        dict: calculated intrinsic parameters for given temperature
+
+            n_0 (float): equilibrium electron concentration [ / cm^-3]
+            p_0 (float): equilibrium hole concentration [ / cm^-3]
+            E_f_0 (float): equilibrium Fermi level energy [eV]
+            dE_g_0 (float): total shift in bandgap energy due to narrowing [eV]
+            dE_c_0 (float): shift in conduction band energy due to bandgap narrowing [eV]
+            dE_v_0 (float): shift in valance band energy due to bandgap narrowing [eV]
+            gamma_BGN_0 (float): bandgap narrowing correction factor at equilibrium [ ]
+            gamma_degen_0 (float): degenerecy correction factor at equilibrium [ ]
+            n_i_0 (float): effective intrinsic carrier concentration at equilibrium [ / cm^-3]
+    '''
+
+    # unpack required parameters and variables
+    T = _params['T']
+    N_D = _params['N_D']
+    N_A = _params['N_A']
+
+    E_c_i = _intr['E_c_i']
+    E_v_i = _intr['E_v_i']
+    N_c_i = _intr['N_c_i']
+    N_v_i = _intr['N_v_i']
+    n_i = _intr['n_i']
+
+
+    # initial guess (intrinsic/equilibrium values), calculate electron/hole conc.
+    n_i_0 = n_i
+
+
+    # default initial reference to ensure initial iteration
+    n_i_ref = 2 * n_i_0
+
+    # set iteration params
+    _iter = 0
+    max_iter = 20
+
+
+    # iterate for convergence of n_i to within 0.01% variation
+    while (_iter <= max_iter) and ( abs((n_i_0 - n_i_ref) / n_i_ref) > 1e-4 ):
+
+        # incriment iterator
+        _iter += 1
+
+        # update reference value for intrinsic carrier concentration convergence
+        n_i_ref = n_i_0
+
+
+        # perform calculation for intrinsic carrier concentration incorporating bandgap narrowing and degeneracy
+        n_0, p_0, dE_g_0, dE_c_0, dE_v_0, E_c_0, E_v_0, E_f_0, gamma_bgn_0, gamma_degen_0, n_i_0 = iter_equil_calc(
+            _n_i = n_i, _T = T, _N_D = N_D, _N_A = N_A, _E_c_i = E_c_i, _E_v_i = E_v_i, _N_c_i = N_c_i, _N_v_i = N_v_i,
+            _n_i_0 = n_i_0)
+
+
+    # calculate equilibrium electron, hole concentration [ / cm^-3], zero excess charge density
+    n_0, p_0 = models.calc_np(_N_D = N_D, _N_A = N_A, _dn = 0, _dp = 0, _n_i = n_i_0)
+
+
+    # return calculated parameters
+    return { 'n_0': n_0, 'p_0': p_0, 'n_i_0': n_i_0} # 'E_f_0': E_f_0, 'dE_g_0': dE_g_0, 'dE_c_0': dE_c_0,
+        # 'dE_v_0': dE_v_0, 'E_c_0': E_c_0, 'E_v_0': E_v_0, 'gamma_bgn_0': gamma_bgn_0, 'gamma_degen_0': gamma_degen_0
+
+
+
+def iter_noneq_calc(_n_i, _T, _N_D, _N_A, _E_c_i, _E_v_i, _N_c_i, _N_v_i, _dn, _dp, _n_i_eff):
+
+    ''' Calculate Steady State Intrinsic Carrier Concentration through Iteration
+
+    Args:
+        _n_i (float): intrinsic carrier concentration [ / cm^-3]
+        _T (float): temperature [K]
+        _N_D (float): donor doping concentration [ / cm^-3]
+        _N_A (float): acceptor doping concentration [ / cm^-3]
+        _E_c_i (float): intrinsic conduction band energy relative to intrinsic Fermi level [eV]
+        _E_v_i (float): intrinsic valance band energy relative to intrinsic Fermi level [eV]
+        _N_c (float): intrinsic conduction band density of states [ / cm^3]
+        _N_v (float): intrinsic valance band density of states [ / cm^3]
+        _dn (float): excess electron carrier concentration [ / cm^-3]
+        _dp (float): excess hole carrier concentration [ / cm^-3]
+        n_i_eff (float): effective intrinsic carrier concentration at equilibrium [ / cm^-3]
+
+    Returns:
+        n (float): electron concentration [ / cm^-3]
+        p (float): hole concentration [ / cm^-3]
+        E_f_n (float): electron Fermi level energy [eV]
+        E_f_p (float): hole Fermi level energy [eV]
+        dE_g (float): total shift in bandgap energy due to narrowing [eV]
+        dE_c (float): shift in conduction band energy due to bandgap narrowing [eV]
+        dE_v (float): shift in valance band energy due to bandgap narrowing [eV]
+        gamma_BGN (float): bandgap narrowing correction factor at equilibrium [ ]
+        gamma_degen (float): bandgap narrowing correction factor at equilibrium [ ]
+        n_i_eff (float): effective intrinsic carrier concentration at equilibrium [ / cm^-3]
+    '''
+
+    # calculate equilibrium electron, hole concentration [ / cm^-3], zero excess charge density
+    n, p = models.calc_np(_N_D = _N_D, _N_A = _N_A, _dn = _dn, _dp = _dp, _n_i = _n_i_eff)
+
+
+    # calculate shift in conduction, valance band energy due to bandgap narrowing [eV]
+    dE_g, dE_c, dE_v = models.calc_dE_bgn(_N_D = _N_D, _N_A = _N_A, _n = n, _p = p, _T = _T)
+
+
+    # adjust intrinsic conduction, valance band energy due to bandgap narrowing
+    E_c = _E_c_i - dE_c
+    E_v = _E_v_i + dE_v
+
+
+    # calculate electron, hole fermi energy level [eV]
+    E_f_n, E_f_p = models.calc_E_f(_E_c = E_c, _E_v = E_v, _n = n, _p = p, _T = _T, _N_c_i = _N_c_i, _N_v_i = _N_v_i)
+
+
+    # calculate bandgap narrowing correction factor [ ]
+    gamma_bgn = models.calc_gamma_bgn(_dE_c = dE_c, _dE_v = dE_v, _E_c_i = _E_c_i, _E_v_i = _E_v_i,
+        _E_f_n = E_f_n, _E_f_p = E_f_p, _T = _T)
+
+
+    # calculate degeneracy factor [ ]
+    gamma_degen = models.calc_gamma_degen(_E_c = E_c, _E_v = E_v, _E_f_n = E_f_n, _E_f_p = E_f_p, _T = _T)
+
+
+    # calculate non-equilibrium correction factor [ ]
+    gamma_noneq = models.calc_gamma_noneq(_E_f_n = E_f_n, _E_f_p = E_f_p, _T = _T)
+
+
+    # update effective intrinsic carrier concentration
+    n_i_eff = ((_n_i**2) * gamma_bgn * gamma_degen)**0.5
+
+
+    # return calculated parameters
+    return n, p, dE_g, dE_c, dE_v, E_c, E_v, E_f_n, E_f_p, gamma_bgn, gamma_degen, gamma_noneq, n_i_eff
+
+
+
+def get_noneq(_params, _intr, _equil, _vars):
+
+    ''' Get Steady State Parameters
+
+        Calculate equilibrium parameters dependent on doping density and excess carrier densities; effective
+        electron, hole carrier concentrations; iterate for convergence of effective intrinsic carrier density
+
+    Args:
+        _params (dict): required parameters for calculations
+
+            T (float): temperature [K]
+            N_D (float): donor doping concentration [ / cm^-3]
+            N_A (float): acceptor doping concentration [ / cm^-3]
+            n_i (float): intrinsic carrier concentration [ / cm^-3]
+            N_c (float): intrinsic conduction band density of states [ / cm^3]
+            N_v (float): intrinsic valance band density of states [ / cm^3]
+            E_c_i (float): intrinsic conduction band energy relative to intrinsic Fermi level [eV]
+            E_v_i (float): intrinsic valance band energy relative to intrinsic Fermi level [eV]
+
+        _vars (dict): required variables for calculation
+
+            dn (float): excess electron concentration [ / cm^-3]
+            dp (float): excess hole concentration [ / cm^-3]
+
+    Returns:
+        dict: calculated intrinsic parameters for given temperature
+
+            n_0 (float): equilibrium electron concentration [ / cm^-3]
+            p_0 (float): equilibrium hole concentration [ / cm^-3]
+            E_f_0 (float): equilibrium Fermi level energy [eV]
+            dE_g_0 (float): total shift in bandgap energy due to narrowing [eV]
+            dE_c_0 (float): shift in conduction band energy due to bandgap narrowing [eV]
+            dE_v_0 (float): shift in valance band energy due to bandgap narrowing [eV]
+            gamma_BGN (float): bandgap narrowing correction factor at equilibrium [ ]
+            n_i_eff (float): effective intrinsic carrier concentration at equilibrium [ / cm^-3]
+    '''
+
+    # unpack required parameters and variables
+    T = _params['T']
+    N_D = _params['N_D']
+    N_A = _params['N_A']
+
+    E_c_i = _intr['E_c_i']
+    E_v_i = _intr['E_v_i']
+    N_c_i = _intr['N_c_i']
+    N_v_i = _intr['N_v_i']
+    n_i = _intr['n_i']
+
+    n_0 = _equil['n_0']
+    p_0 = _equil['p_0']
+    n_i_0 = _equil['n_i_0']
+
+    dn = _vars['dn']
+    dp = _vars['dp']
+
+
+    # initial guess (intrinsic/equilibrium values), calculate electron/hole conc.
+    n_i_eff = n_i_0
+
+
+    # default initial reference to ensure initial iteration
+    n_i_ref = 2 * n_i_eff
+
+    # set iteration params
+    _iter = 0
+    max_iter = 20
+
+
+    # iterate for convergence of n_i to within 0.01% variation
+    while (_iter <= max_iter) and ( abs((n_i_eff - n_i_ref) / n_i_ref) > 1e-4 ):
+
+        # incriment iterator
+        _iter += 1
+
+        # update reference value for intrinsic carrier concentration convergence
+        n_i_ref = n_i_eff
+
+
+        # perform calculation for intrinsic carrier concentration incorporating bandgap narrowing and degeneracy
+        n, p, dE_g, dE_c, dE_v, E_c, E_v, E_f_n, E_f_p, gamma_bgn, gamma_degen, gamma_noneq, n_i_eff = iter_noneq_calc(
+            _n_i = n_i, _T = T, _N_D = N_D, _N_A = N_A, _E_c_i = E_c_i, _E_v_i = E_v_i, _N_c_i = N_c_i, _N_v_i = N_v_i,
+            _dn = dn, _dp = dp, _n_i_eff = n_i_eff)
+
+
+    # calculate non-equilibrium electron, hole concentration [ / cm^-3]
+    n, p = models.calc_np(_N_D = N_D, _N_A = N_A, _dn = dn, _dp = dp, _n_i = n_i_eff)
+
+
+    # return calculated parameters
+    return { 'n': n, 'p': p, 'n_i_eff': n_i_eff} # 'E_f_n': E_f_n, 'E_f_p': E_f_p, 'dE_g': dE_g, 'dE_c': dE_c,
+        # 'dE_v': dE_v, 'gamma_bgn': gamma_bgn, 'gamma_degen': gamma_degen, 'gamma_noneq': gamma_noneq
+
+
+
+def get_nd_dep(_dn, _params, _intr, _equil):
+
+    ''' Get Charge Density Dependent Values
+
+        Calculate charge density dependent values: non-equilibrium effective intrinsic carrier concentration, radiative
+        recombination lifetime, Auger recombination lifetime
+
+    Args:
+        _dn (np.array): excess electron concentrations [ / cm^-3]
+        _params (dict): required parameters for calculations
+        _intr (dict): parameters returned from intrinsic calculations
+        _equil (dict): parameters returned from equilibrium calculations
+
+    Returns:
+        results (dict): calculated non-equilibrium values
+
+            n_i_eff (np.array): effective non-equilibrium intrinsic carrier densities [ / cm^3]
+            tau_aug (np.array): auger recombination lifetime [ / s]
+            tau_rad (np.array): radiative recombination lifetime [ / s]
+            dn (np.array): excess charge carrier density [ / cm^-3]
+    '''
+
+    # initialise results storage list
+    results = {
+        'n_i_eff': [],
+        'tau_rad': [],
+        'tau_aug': [],
+    }
+
+
+    # iterate each charge density value
+    for i in range(len(_dn)):
+
+        # initialise and define dependent variables, equivalent excess electron/hole generation
+        _vars = {'dn': _dn[i], 'dp': _dn[i]}
+
+
+        # non-equilibrium calculations
+        noneq = get_noneq(_params = _params, _intr = _intr, _equil = _equil, _vars = _vars)
+
+        # store calculated value
+        results['n_i_eff'].append( noneq['n_i_eff'] )
+
+
+        # calculate radiative recombination lifetime
+        tau_rad = models.calc_tau_rad(_dn = _dn[i], _n = noneq['n'], _p = noneq['p'], _n_i_eff = noneq['n_i_eff'],
+            _T = _params['T'])
+
+        # store calculated value
+        results['tau_rad'].append( tau_rad )
+
+
+        # calculate auger recombination lifetime
+        tau_aug = models.calc_tau_aug(_dn = _dn[i], _n = noneq['n'], _p = noneq['p'], _n_0 = _equil['n_0'],
+            _p_0 = _equil['p_0'], _n_i_eff = noneq['n_i_eff'], _T = _params['T'])
+
+        # store calculated value
+        results['tau_aug'].append( tau_aug )
+
+
+    # pack results lists into arrays
+    for key, value in results.items():
+        results[key] = np.array(value)
+
+
+    # store charge charge density values
+    results['dn'] = _dn
+    #results['dp'] = _dn
+
+
+    # return calculated non-equilibrium effective intrinsic carrier concentration as array
+    return results
+
+
+
+def calc_tau_eff(_opt_vars, _params, _data, _comps, _names):
+
+    ''' Calculate Effective Carrier Lifetime
+
+        Calculate effective carrier lifetime from model sum of component recombination lifetimes
+
+    Args:
+        _opt_vars (list): model component optimisation variables
+        _params (dict): required parameters for calculations
+        _data (dict): results from charge density dependent calculations
+        _comps (list): list of model components
+        _names (list): list of optimisation variable names
+
+    Returns:
+        rec (dict): each calculated recombination component in model, inc. effective lifetime
+    '''
+
+    # unpack required non-equilibrium data values
+    dn = _data['dn']
+
+    # renormalise optimisation variables
+    _opt_vars = [ 10.**v for v in _opt_vars]
+
+    # store recombination and effective lifetimes
+    rec = {'dn': dn}
+
+
+    # check for radiative model component
+    if 'rad' in _comps:
+
+        # unpack radiative recombinaiton lifetime data
+        rec['tau_rad'] = _data['tau_rad']
+
+
+    # check for auger model component
+    if 'aug' in _comps:
+
+        # unpack auger recombinaiton lifetime data
+        rec['tau_aug'] = _data['tau_aug']
+
+
+    # check for sdr model component
+    if 'sdr' in _comps:
+
+        # unpack required parameters
+        N_M = _params['N_M']
+        W = _params['W']
+
+        n_i_eff = _data['n_i_eff']
+
+        # unpack srh optimisation variables
+        J_0 = _opt_vars[ [ i for i in range(len(_names)) if _names[i] == 'J_0' ][0] ]
+
+
+        # calculate surface defect recombination lifetime
+        rec['tau_sdr'] = models.calc_tau_sdr(_dn = dn, _J_0 = J_0, _N_M = N_M, _n_i_eff = n_i_eff, _W = W )
+
+
+    # check for srh model component
+    if 'srh' in _comps:
+
+        # unpack required parameters
+        N_M = _params['N_M']
+
+        # unpack srh optimisation variables
+        t_m0 = _opt_vars[ [ i for i in range(len(_names)) if _names[i] == 't_m0' ][0] ]
+        t_M0 = _opt_vars[ [ i for i in range(len(_names)) if _names[i] == 't_M0' ][0] ]
+
+
+        # calculate SRH recombination lifetime
+        rec['tau_srh'] = models.calc_tau_srh(_dn = dn, _N_M = N_M, _t_m0 = t_m0, _t_M0 = t_M0)
+
+
+    # calculate effective charge carrier lifetime from inverse sum all model component lifetimes
+    rec['tau_eff'] = ( sum( [ tau**-1 for tau in rec.values() ] ) )**-1
+
+
+    # return calculated recombination and effective lifetimes
+    return rec
+
+
+
+
+def get_residual(_opt_vars, _params, _data, _ref, _comps, _names):
+
+    ''' Get Effective Lifetime Residual
+
+        Calculate effective carrier lifetime from model and return residual relative to measured effective lifetime
+
+    Args:
+        _opt_vars (list): model component optimisation variables
+        _params (dict): required parameters for calculations
+        _data (dict): results from charge density dependent calculations
+        _comps (list): list of model components
+        _names (list): list of optimisation variable names
+
+    Returns:
+        np.array: effective lifetime residual
+    '''
+
+    # calculate effective lifetime
+    rec = calc_tau_eff(_opt_vars = _opt_vars, _params = _params, _data = _data, _comps = _comps, _names = _names)
+
+    # calculate residual
+    residual = _ref - rec['tau_eff']
+
+
+    # return calculated residual
+    return residual
+
+
+
+def fit_model(_model_params, _sample, _sample_state, _measurement, _results):
+
+    ''' Fit Effective Lifetime Model to Measurement Data
+
+        Calculate effective carrier lifetime from model and fit to measured effective lifetime using minimisation over
+        model component parameters; return fit results and components
+
+    Args:
+        _model (str): chosen model to fit to data
+        _sample (dict): sample data node
+        _sample_state (dict): sample state data node
+        _measurement (dict): measurement data node
+        _results (dict): results data node
+
+    Returns:
+        dict: effective lifetime fit results and model components
+    '''
+
+
+    # set doping density by wafer type
+    if _sample['params']['wafer_doping_type'] == 'n-type':
+        N_D = _results['data']['wafer_doping_density']
+        N_A = 0.
+    else:
+        N_D = 0.
+        N_A = _results['data']['wafer_doping_density']
+
+
+    # initialise global parameters storage dict
+    params = {'T': _measurement['params']['temperature'],
+              'W': _sample_state['params']['wafer_thickness'],
+              'N_M': _results['data']['wafer_doping_density'],
+              'N_D': N_D,
+              'N_A': N_A,}
+
+
+    # intrinsic calculation
+    intr = get_intr(_params = params)
+
+
+    # equilibrium calculations
+    equil = get_equil(_params = params, _intr = intr)
+
+
+    # unpack required data to fit model
+    charge_density = _results['data']['charge_density']
+    lifetime = _results['data']['lifetime']
+
+
+    # trim charge density data range
+    j = np.where((charge_density >= _model_params['nd_range'][0]) & (charge_density <= _model_params['nd_range'][1]))
+    charge_density = charge_density[j]
+    lifetime = lifetime[j]
+
+
+    # define charge density range
+    dn = charge_density
+
+
+    # get charge density dependent values (n_i_eff, tau_aug, tau_rad), assume equal excess electron, hole generation
+    data = get_nd_dep(_dn = dn, _params = params, _intr = intr, _equil = equil)
+
+
+    # select model to fit
+    if _model_params['model'] == 'std':
+
+        # define model, initial parameter values, parameter limits; (log values for parameters)
+        model = {'aug':{}, 'rad':{},
+                 'sdr':{'params':['J_0'],
+                        'inits':[-14],
+                        'limits':[ [-15, -12] ]},
+                 'srh':{'params':['t_m0', 't_M0'],
+                        'inits':[-5, -4],
+                        'limits':[ [-6, -2], [-6, -2] ]},}
+
+
+    # prepare model and params for optimisation
+    comps = [ k for k in model.keys() ]
+    opt_vars = [ p for v in model.values() if len(v) != 0 for p in v['params'] ]
+    inits = [ i for v in model.values() if len(v) != 0 for i in v['inits'] ]
+    limits = [ l for v in model.values() if len(v) != 0 for l in v['limits'] ]
+    bounds = [ tuple( l[i] for l in limits ) for i in range(len(limits[0])) ]
+
+
+    # minimise using bounded nonlinear least-squares
+    opt = optimize.least_squares(fun = get_residual, x0 = inits, bounds = bounds,
+        args = (params, data, lifetime, comps, opt_vars), jac = '3-point',
+        method = 'trf', ftol = 1e-10, xtol = 1e-12, gtol = 1e-12, x_scale = 'jac', loss = 'cauchy')
+
+
+    # define new charge density range
+    dn = np.logspace(13, 18, 100)
+
+    # get charge density dependent values (n_i_eff, tau_aug, tau_rad), assume equal excess electron, hole generation
+    data = get_nd_dep(_dn = dn, _params = params, _intr = intr, _equil = equil)
+
+
+    # calculate sdr, srh, and effective charge carrier lifetime from optimal parameters
+    rec = calc_tau_eff(_opt_vars = opt.x, _params = params, _data = data, _comps = comps, _names = opt_vars)
+
+
+    # calculate bulk lifetime component
+    rec['tau_blk'] = (rec['tau_eff']**-1 - rec['tau_sdr']**-1)**-1
+
+
+    # store optimal model parameters
+    rec['opt_vars'] = { opt_vars[i]: opt.x[i] for i in range(len(opt_vars)) }
+
+
+    # calculate and store values
+    rec['J_0'] = np.power(10., rec['opt_vars']['J_0'])
+    rec['t_blk'] = rec['tau_blk'].max()
+
+
+    # store model used for calculations
+    rec['model'] = _model_params['model']
+
+
+    # return fitting results
+    return rec
