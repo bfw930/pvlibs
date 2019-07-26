@@ -16,7 +16,7 @@ from .core import import_measurement_data_file, process_measurement_data
 from .core import add_files
 
 
-from .upload import file_upload, file_upload_widget, clear_uploads
+#from .upload import file_upload, file_upload_widget, clear_uploads
 
 
 
