@@ -17,6 +17,7 @@ openpyxl = "*"
 pillow = "*"
 ipympl = "*"
 ipywidgets = "*"
+seaborn = "*"
 
 [requires]
 python_version = "3.7"
