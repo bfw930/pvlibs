@@ -20,6 +20,13 @@ from .core import add_files
 
 
 
+### updates for jupyter notebook orchestration
+from .nbks import init_file_db, parse_file_names, import_file_data, process_file_data
+from .nbks import select_node, plot_mlt_fit, compile_data
+
+
+
+
 
 ''' development only - direct access to module functions '''
 

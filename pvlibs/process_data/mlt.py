@@ -358,7 +358,15 @@ def mlt(data):
     # calculate and store values
     rec['J_0'] = rec['opt_vars']['J_0']
 
-    j = np.where(rec['dn'] >= 2e15)[0][0]
+
+    # check for specific nd value for extraction
+    if 'nd_vals' in data.keys():
+        _dn = data['nd_vals']
+    # default to 10 % doping density
+    else:
+        _dn = N_M * 0.1
+
+    j = np.where(rec['dn'] >= _dn)[0][0]
     #j = np.where(rec['dn'] >= N_M*0.1)[0][0]
     rec['t_blk'] = rec['tau_srh'][j]
     rec['t_eff'] = rec['tau_eff'][j]
