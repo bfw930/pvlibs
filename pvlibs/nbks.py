@@ -320,58 +320,63 @@ def plot_mlt_fit(db, params):
     # get selected node by first parameter match in database
     _node = select_node(db, params)
 
-
-    # print selected model fit parameters
-    print('Implied Open Circuit Voltage (iVoc) = {:.1f} [mV]'.format(_node['ivoc']*1e3))
-    print('Surface Recombination Velocity (J_0) = {:.1f} [fa]'.format(_node['J_0']*1e15))
-    print('Effective Lifetime = {:.1f} [us]'.format(_node['t_eff']*1e6))
-    print('Bulk Lifetime = {:.1f} [us]'.format(_node['t_blk']*1e6))
-    print('Model Fit Quality = {:.2f} [R^2]'.format(_node['R2']))
+    # ensure found a node, else print and break
+    if type(_node) == None:
+        print('no measurement found, please check filter parameters')
+    else:
 
 
-    # initialise figure and axes
-    _w = 9; _h = 6
-    fig = plt.figure(figsize = (_w, _h))
-    fig.canvas.layout.width = '{}in'.format(_w)
-    fig.canvas.layout.height= '{}in'.format(_h)
-
-    ax = fig.add_subplot(111)
-
-
-    # format figure axes
-    ax.set_xlim(5e13, 5e16)
-    ax.set_ylim(5e1, 5e6)
-
-    ax.set_xscale('log')
-    ax.set_yscale('log')
-
-    ax.set_xlabel(r'Charge Density (cm$^{-3}$)')
-    ax.set_ylabel(r'Inverse Carrier Lifetime (s)')
+        # print selected model fit parameters
+        print('Implied Open Circuit Voltage (iVoc) = {:.1f} [mV]'.format(_node['ivoc']*1e3))
+        print('Surface Recombination Velocity (J_0) = {:.1f} [fa]'.format(_node['J_0']*1e15))
+        print('Effective Lifetime = {:.1f} [us]'.format(_node['t_eff']*1e6))
+        print('Bulk Lifetime = {:.1f} [us]'.format(_node['t_blk']*1e6))
+        print('Model Fit Quality = {:.2f} [R^2]'.format(_node['R2']))
 
 
-    # plot measured charge density dependent effective lifetime
-    ax.plot(_node['nd'][::2], _node['tau'][::2]**-1, 'ok', label = 'measured', alpha = 0.3)
+        # initialise figure and axes
+        _w = 9; _h = 6
+        fig = plt.figure(figsize = (_w, _h))
+        fig.canvas.layout.width = '{}in'.format(_w)
+        fig.canvas.layout.height= '{}in'.format(_h)
+
+        ax = fig.add_subplot(111)
 
 
-    # iterate and plot each model component
-    for name, tau in _node.items():
-        if name[:4] == 'tau_':
+        # format figure axes
+        ax.set_xlim(5e13, 5e16)
+        ax.set_ylim(5e1, 5e6)
 
-            # plot charge density dependent recombination lifetime component
-            ax.plot(_node['dn'], tau**-1 , '--', label = '{}'.format(name), linewidth = 2, alpha = 0.6)
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+
+        ax.set_xlabel(r'Charge Density (cm$^{-3}$)')
+        ax.set_ylabel(r'Inverse Carrier Lifetime (s)')
 
 
-    # build and set figure title from params
-    ax.set_title(' - '.join( [ '{}: {}'.format(k, v) for k, v in params.items() ] ))
+        # plot measured charge density dependent effective lifetime
+        ax.plot(_node['nd'][::2], _node['tau'][::2]**-1, 'ok', label = 'measured', alpha = 0.3)
 
 
-    # display figure
-    plt.legend(loc = 'upper left')
-    plt.tight_layout()
+        # iterate and plot each model component
+        for name, tau in _node.items():
+            if name[:4] == 'tau_':
 
-    #plt.savefig('./results/lt-fit-B-control.png', dpi = 150)
+                # plot charge density dependent recombination lifetime component
+                ax.plot(_node['dn'], tau**-1 , '--', label = '{}'.format(name), linewidth = 2, alpha = 0.6)
 
-    plt.show()
+
+        # build and set figure title from params
+        ax.set_title(' - '.join( [ '{}: {}'.format(k, v) for k, v in params.items() ] ))
+
+
+        # display figure
+        plt.legend(loc = 'upper left')
+        plt.tight_layout()
+
+        #plt.savefig('./results/lt-fit-B-control.png', dpi = 150)
+
+        plt.show()
 
 
 
