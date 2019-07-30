@@ -320,10 +320,8 @@ def plot_mlt_fit(db, params):
     # get selected node by first parameter match in database
     _node = select_node(db, params)
 
-    # ensure found a node, else print and break
-    if type(_node) == None:
-        print('no measurement found, please check filter parameters')
-    else:
+    # ensure found a node
+    if _node is not None:
 
 
         # print selected model fit parameters
@@ -378,6 +376,10 @@ def plot_mlt_fit(db, params):
 
         plt.show()
 
+
+    # failed to find a node
+    else:
+        print('no measurement found, please check filter parameters')
 
 
 def compile_data(db, labels, values):
