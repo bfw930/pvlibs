@@ -18,6 +18,9 @@ pillow = "*"
 ipympl = "*"
 ipywidgets = "*"
 seaborn = "*"
+hdbscan = "*"
+umap-learn = "*"
+numba = "*"
 
 [requires]
 python_version = "3.7"

@@ -310,7 +310,6 @@ def plot_mlt_fit(db, params):
 
     Args:
         db (list): database instance as list of file nodes (dict)
-        meas_type (str): measurement type for processing
         params (dict): node containing sinton lifetime model fit data
 
     Returns:
@@ -320,17 +319,79 @@ def plot_mlt_fit(db, params):
     # get selected node by first parameter match in database
     _node = select_node(db, params)
 
-    # ensure found a node
-    if _node is not None:
+    ## need to ensure found a node, else fail gracefully
 
 
-        # print selected model fit parameters
-        print('Implied Open Circuit Voltage (iVoc) = {:.1f} [mV]'.format(_node['ivoc']*1e3))
-        print('Surface Recombination Velocity (J_0) = {:.1f} [fa]'.format(_node['J_0']*1e15))
-        print('Effective Lifetime = {:.1f} [us]'.format(_node['t_eff']*1e6))
-        print('Bulk Lifetime = {:.1f} [us]'.format(_node['t_blk']*1e6))
-        print('Model Fit Quality = {:.2f} [R^2]'.format(_node['R2']))
+    # print selected model fit parameters
+    print('Implied Open Circuit Voltage (iVoc) = {:.1f} [mV]'.format(_node['ivoc']*1e3))
+    print('Surface Recombination Velocity (J_0) = {:.1f} [fa]'.format(_node['J_0']*1e15))
+    print('Effective Lifetime = {:.1f} [us]'.format(_node['t_eff']*1e6))
+    print('Bulk Lifetime = {:.1f} [us]'.format(_node['t_blk']*1e6))
+    print('SRH K-value = {:.2f} []'.format(_node['k_val']))
+    print('Model Fit Quality = {:.2f} [R^2]'.format(_node['R2']))
 
+
+    # initialise figure and axes
+    _w = 9; _h = 6
+    fig = plt.figure(figsize = (_w, _h))
+    fig.canvas.layout.width = '{}in'.format(_w)
+    fig.canvas.layout.height= '{}in'.format(_h)
+
+    ax = fig.add_subplot(111)
+
+
+    # format figure axes
+    ax.set_xlim(5e13, 5e16)
+    ax.set_ylim(5e1, 5e6)
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+
+    ax.set_xlabel(r'Charge Density (cm$^{-3}$)')
+    ax.set_ylabel(r'Inverse Carrier Lifetime (s)')
+
+
+    # plot measured charge density dependent effective lifetime
+    ax.plot(_node['nd'][::2], _node['tau'][::2]**-1, 'ok', label = 'measured', alpha = 0.3)
+
+
+    # iterate and plot each model component
+    for name, tau in _node.items():
+        if name[:4] == 'tau_':
+
+            # plot charge density dependent recombination lifetime component
+            ax.plot(_node['dn'], tau**-1 , '--', label = '{}'.format(name), linewidth = 2, alpha = 0.6)
+
+
+    # build and set figure title from params
+    ax.set_title(' - '.join( [ '{}: {}'.format(k, v) for k, v in params.items() ] ))
+
+
+    # display figure
+    plt.legend(loc = 'upper left')
+    plt.tight_layout()
+
+    #plt.savefig('./results/lt-fit-B-control.png', dpi = 150)
+
+    plt.show()
+
+
+
+def save_mlt_fit(db, file_name_head, params):
+
+    ''' Plot and Save Sinton Lifetime Model Fits
+
+    Args:
+        db (list): database instance as list of file nodes (dict)
+        file_name_head (str): header inc path for output file name
+        params (list): ordered list of parameters to use in plot output file name
+
+    Returns:
+        (none): figure saved to disk
+    '''
+
+    # iterate all nodes in database
+    for _node in db:
 
         # initialise figure and axes
         _w = 9; _h = 6
@@ -365,24 +426,27 @@ def plot_mlt_fit(db, params):
 
 
         # build and set figure title from params
-        ax.set_title(' - '.join( [ '{}: {}'.format(k, v) for k, v in params.items() ] ))
+        ax.set_title(' - '.join( [ '{}: {}'.format(p, _node[p]) for p in params ] ))
 
 
         # display figure
         plt.legend(loc = 'upper left')
         plt.tight_layout()
 
-        #plt.savefig('./results/lt-fit-B-control.png', dpi = 150)
+        # build plot output file name from params
+        file_name = '{}-{}.png'.format(file_name_head, '-'.join([ _node[p] for p in params ]))
 
-        plt.show()
+        # save plot to file
+        plt.savefig(file_name, dpi = 150)
+
+        # close current figure
+        plt.close()
+
+        print('plot saved to file: {}'.format(file_name))
 
 
-    # failed to find a node
-    else:
-        print('no measurement found, please check filter parameters')
 
-
-def compile_data(db, labels, values):
+def compile_data(db, labels, values, file_name = 'results-summary'):
 
     ''' Compile Data and Export
 
@@ -419,14 +483,72 @@ def compile_data(db, labels, values):
 
 
     # save summary data to file
-    data.to_csv('./results-summary.csv', index = False)
+    data.to_csv('./{}.csv'.format(file_name), index = False)
 
 
-    print('\n complete "results-summary.csv" saved in current directory')
+    print('\n complete "{}.csv" saved in current directory'.format(file_name))
 
 
     #return compiled data
     return data
 
+
+
+def save_all_data(db, file_name_head, params):
+
+    ''' Compile All Source and Calc Data and Export
+
+    Args:
+        db (list): database instance as list of file nodes (dict)
+        file_name_head (str): header inc path for output file name
+        params (list): ordered list of parameters to use in plot output file name
+
+    Returns:
+        (none): each measurement compiled data saved to file
+    '''
+
+    # define data for output as dict of file: data params [list]
+    outputs = {
+        'raw': {
+            'time': 'Measurement Time [s]',
+            'conductance': 'Photo-conductance [V]',
+            'illumination': 'Photon Density [cm^-3]',
+        },
+        'proc': {
+            'nd': 'Charge Density [cm^-3]',
+            'tau': 'Lifetime [s^-1]',
+            'isuns': 'Implied Suns [suns]',
+            'n_i_eff': 'Intrinsic Carrier Conc. [cm^-3]',
+        },
+        'fit': {
+            'dn': 'Charge Density [cm^-3]',
+            'tau_rad': 'Radiative Recombination Lifetime [s^-1]',
+            'tau_aug': 'Auger Recombination Lifetime [s^-1]',
+            'tau_sdr': 'Surface Defect Recombination Lifetime [s^-1]',
+            'tau_srh': 'Bulk (SRH) Recombination Lifetime [s^-1]',
+            'tau_eff': 'Effective Recombination Lifetime [s^-1]',
+        },
+    }
+
+    # iterate each node in database
+    for node in db:
+
+        # iterate over output files
+        for out, outs in outputs.items():
+
+            # iterate over each data in output, store as dataset
+            data = { v: node[k] for k,v in outs.items() }
+
+            # store values in pandas dataframe
+            data = pd.DataFrame(data)
+
+
+            # build plot output file name from params
+            file_name = '{}-{}-{}.csv'.format(file_name_head, out, '-'.join([ node[p] for p in params ]))
+
+            # save summary data to file
+            data.to_csv(file_name, index = False)
+
+            print('data saved to file: {}'.format(file_name))
 
 

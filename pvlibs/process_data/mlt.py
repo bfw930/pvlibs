@@ -376,7 +376,16 @@ def mlt(data):
 
     rec['R2'] = r2
 
-    rec['opt_full'] = opt
+    #rec['opt_full'] = opt
+
+
+    # calculate SRH k-value
+    t_m0 = rec['opt_vars']['t_m0']
+    t_M0 = rec['opt_vars']['t_M0']
+
+    k = t_M0/t_m0
+    rec['k_val'] = k
+
 
 
     if False:
