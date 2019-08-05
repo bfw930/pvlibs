@@ -494,7 +494,7 @@ def compile_data(db, labels, values, file_name = 'results-summary'):
 
 
 
-def save_all_data(db, file_name_head, params):
+def save_all_data(db, file_name_head, params, outputs = None):
 
     ''' Compile All Source and Calc Data and Export
 
@@ -507,28 +507,30 @@ def save_all_data(db, file_name_head, params):
         (none): each measurement compiled data saved to file
     '''
 
-    # define data for output as dict of file: data params [list]
-    outputs = {
-        'raw': {
-            'time': 'Measurement Time [s]',
-            'conductance': 'Photo-conductance [V]',
-            'illumination': 'Photon Density [cm^-3]',
-        },
-        'proc': {
-            'nd': 'Charge Density [cm^-3]',
-            'tau': 'Lifetime [s^-1]',
-            'isuns': 'Implied Suns [suns]',
-            'n_i_eff': 'Intrinsic Carrier Conc. [cm^-3]',
-        },
-        'fit': {
-            'dn': 'Charge Density [cm^-3]',
-            'tau_rad': 'Radiative Recombination Lifetime [s^-1]',
-            'tau_aug': 'Auger Recombination Lifetime [s^-1]',
-            'tau_sdr': 'Surface Defect Recombination Lifetime [s^-1]',
-            'tau_srh': 'Bulk (SRH) Recombination Lifetime [s^-1]',
-            'tau_eff': 'Effective Recombination Lifetime [s^-1]',
-        },
-    }
+    if outputs is None:
+
+        # define data for output as dict of file: data params [list]
+        outputs = {
+            'raw': {
+                'time': 'Measurement Time [s]',
+                'conductance': 'Photo-conductance [V]',
+                'illumination': 'Photon Density [cm^-3]',
+            },
+            'proc': {
+                'nd': 'Charge Density [cm^-3]',
+                'tau': 'Lifetime [s^-1]',
+                'isuns': 'Implied Suns [suns]',
+                'n_i_eff': 'Intrinsic Carrier Conc. [cm^-3]',
+            },
+            'fit': {
+                'dn': 'Charge Density [cm^-3]',
+                'tau_rad': 'Radiative Recombination Lifetime [s^-1]',
+                'tau_aug': 'Auger Recombination Lifetime [s^-1]',
+                'tau_sdr': 'Surface Defect Recombination Lifetime [s^-1]',
+                'tau_srh': 'Bulk (SRH) Recombination Lifetime [s^-1]',
+                'tau_eff': 'Effective Recombination Lifetime [s^-1]',
+            },
+        }
 
     # iterate each node in database
     for node in db:
@@ -552,3 +554,8 @@ def save_all_data(db, file_name_head, params):
             print('data saved to file: {}'.format(file_name))
 
 
+
+
+
+
+# rotate (align) and zero (top left) images, crop to wafer area (remove background)

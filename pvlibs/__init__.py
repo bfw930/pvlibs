@@ -26,7 +26,6 @@ from .nbks import select_node, plot_mlt_fit, save_mlt_fit, compile_data, save_al
 
 
 
-
 ''' development only - direct access to module functions '''
 
 # database initialisation protocols
