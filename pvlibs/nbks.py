@@ -196,6 +196,8 @@ def parse_file_names(db, param_sep, params):
 
     print('\n{} file names parsed'.format(len(db)))
 
+    return db
+
 
 
 def import_file_data(db):
@@ -245,6 +247,7 @@ def import_file_data(db):
 
     print('\ndata imported from {} files'.format(len(db)))
 
+    return db
 
 
 def process_file_data(db, meas_type = None, params = {}):
@@ -302,6 +305,7 @@ def process_file_data(db, meas_type = None, params = {}):
 
     print('\n{} measurements processed'.format(len(db)))
 
+    return db
 
 
 def plot_mlt_fit(db, params):

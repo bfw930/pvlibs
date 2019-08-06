@@ -21,6 +21,7 @@ seaborn = "*"
 hdbscan = "*"
 umap-learn = "*"
 numba = "*"
+xlrd = "*"
 
 [requires]
 python_version = "3.7"
