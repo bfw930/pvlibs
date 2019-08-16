@@ -293,7 +293,7 @@ def mlt(data):
     model = {'aug':{}, 'rad':{},
              'sdr':{'params':['J_0'],
                     'inits':[-14],
-                    'limits':[ [-16, -10] ]},
+                    'limits':[ [-18, -10] ]},
              'srh':{'params':['t_m0', 't_M0'],
                     'inits':[-4, -4],
                     'limits':[ [-7, -1], [-7, -1] ]},
@@ -340,7 +340,8 @@ def mlt(data):
                                            _N_c_i = N_c_i, _N_v_i = N_v_i, _n_i = n_i, _n_i_0 = n_i_0, _n_0 = n_0,
                                            _p_0 = p_0)
 
-    _data = {'n_i_eff': n_i_eff, 'tau_rad': tau_rad, 'tau_aug': tau_aug, 'dn': dn}
+    data = {'n_i_eff': n_i_eff, 'tau_rad': tau_rad, 'tau_aug': tau_aug, 'dn': dn}
+
 
 
     # calculate sdr, srh, and effective charge carrier lifetime from optimal parameters
@@ -349,6 +350,12 @@ def mlt(data):
 
     # calculate bulk lifetime component
     #rec['tau_blk'] = (rec['tau_eff']**-1 - rec['tau_sdr']**-1)**-1
+
+
+
+    #o = np.where(dn >= 1e16)
+    #rec['n_i_eff'] = n_i_eff[o][0]
+
 
 
     # store optimal model parameters

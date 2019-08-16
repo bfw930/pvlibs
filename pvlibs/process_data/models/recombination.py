@@ -19,6 +19,7 @@ def calc_tau_aug(_dn, _n, _p, _n_0, _p_0, _n_i_eff, _T):
     ''' Calculate Auger Recombination Lifetime
 
         Empirical model for auger recombination - Richter, 2012 []
+            valid 300 K only
 
     Args:
         _dn (float): excess minority carrier concentration [ / cm^-3]
@@ -57,12 +58,70 @@ def calc_tau_aug(_dn, _n, _p, _n_0, _p_0, _n_i_eff, _T):
     return tau_aug
 
 
+'''
+    'Wang and MacDonald 2012 - validated for high injection only (deltaN = 5e16) between -30C and 200C on N_A = 5e15 cm-3 and 421um thk wafers, p-type
+
+        C_a = (1.1E-28 / (TempInK - 193) + 2.1E-33 * TempInK) * ((delta_n / 5E+16) ^ (-0.2))
+
+        tau_auger_calc = 1 / (C_a * delta_n ^ 2)
+
+
+    'Altermatt 1997 - validated for 70-400K, low injection only for wafers with N_A > 1e16 cm-3 p-type wafers --> Need to fix
+
+        g_maxn = 235548 * TempInK ^ (-1.5013)
+        g_maxp = 564812 * TempInK ^ (-1.6546)
+
+        g_eeh = 1 + (g_maxn - 1) * (1 - Application.WorksheetFunction.Tanh((n / 5E+16) ^ (0.34)))
+        g_ehh = 1 + (g_maxp - 1) * (1 - Application.WorksheetFunction.Tanh((p / 5E+16) ^ (0.29)))
+
+        C_p = 7.91E-32 - 4.13E-35 * (TempInK) + 3.59E-37 * (TempInK ^ 2) 'cm^6/s Modified from Dziewior and Schmid
+        C_n = 2.8E-31 'cm^6/s From Dziewior and Schmid
+
+        C_p_eff = C_p * g_ehh
+        C_n_eff = C_n * g_eeh
+
+        invtau_auger_n = (C_n_eff * n ^ 2 * p) / delta_n
+        invtau_auger_p = (C_p_eff * p ^ 2 * n) / delta_n
+
+        tau_auger_calc = 1 / (invtau_auger_n + invtau_auger_p)
+
+
+    'Richter 2012 - validated for 300K only for all injection levels
+
+        n_0 = n - delta_n
+        p_0 = p - delta_n
+        n_i_eff = (n_0 * p_0) ^ 0.5
+
+        g_maxn = 14 '235548 * TempInK ^ (-1.5013)
+        g_maxp = 8.5 '564812 * TempInK ^ (-1.6546)
+
+        g_eeh = 1 + (g_maxn - 1) * (1 - Application.WorksheetFunction.Tanh((n_0 / 3.3E+17) ^ (0.66)))
+        g_ehh = 1 + (g_maxp - 1) * (1 - Application.WorksheetFunction.Tanh((p_0 / 7E+17) ^ (0.63)))
+
+        C_p = 2.5E-31   'cm^6/s @ 300K
+        C_n = 8.5E-32   'cm^6/s @ 300K
+        C_a = 3E-29     'cm^6/s @ 300K
+
+        C_p_eff = C_p * g_ehh
+        C_n_eff = C_n * g_eeh
+
+        invtau_auger_n = (C_n_eff * n_0) * ((n * p - n_i_eff ^ 2) / delta_n)
+        invtau_auger_n = (C_n_eff * n_0) * (n_0 + p_0 + delta_n)
+        invtau_auger_p = (C_p_eff * p_0) * ((n * p - n_i_eff ^ 2) / delta_n)
+        invtau_auger_ambi = (C_a * delta_n ^ 0.92) * ((n * p - n_i_eff ^ 2) / delta_n)
+
+        tau_auger_calc = 1 / (invtau_auger_n + invtau_auger_p + invtau_auger_ambi)
+
+'''
+
+
 
 def calc_tau_rad(_dn, _n, _p, _n_i_eff, _T):
 
     ''' Calculate Radiative Recombination Lifetime
 
         Empirical model for radiative recombination lifetime - Altermatt et al, 2005
+            valid 100 to 390 K
 
     Args:
         _dn (float): excess minority carrier concentration [ / cm^-3]

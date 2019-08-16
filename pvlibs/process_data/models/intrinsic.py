@@ -84,6 +84,7 @@ def calc_E_g_i(_T, _E_g_0 = 1.17):
 
     Empirical model for temperature dependence of intrinsic bandgap; Paessler, Phys. Rev. B, 2002
     [10.1103/PhysRevB.66.085201]
+        validated up to 415K
 
     Args:
         _T (float): temperature [K]
@@ -118,6 +119,7 @@ def calc_N_i(_T):
     ''' Calculate Effective Intrinsic Band Density of States
 
     Empirical model for mass constant; Couderc, J. App. Phys., 2014 [10.1063/1.4867776]
+        validated up to 500K
 
     Args:
         _T (float): temperature [K]
@@ -191,6 +193,9 @@ def calc_E_f_i(_N_c_i, _N_v_i, _E_g_i, _T):
 def calc_n_i(_N_c_i, _N_v_i, _E_g_i, _T):
 
     ''' Calculate Effective Intrinsic Carrier Density
+
+        Couderc, J. App. Phys., 2014 [10.1063/1.4867776]
+            valid for 77-375K
 
     Args
         _N_c_i (float): effective intrinsic conduction band density of states [ / cm^3]
