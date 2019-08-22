@@ -282,6 +282,50 @@ def slt(data):
     wafer_doping_type = data['wafer_doping_type']
 
 
+    if 'trim-slt' in data.keys():
+        trim = data['trim-slt']
+    else:
+        trim = True
+
+    # use voltage transient derivatives to trim start and end, remove error values and noise
+    if trim:
+
+        # select data range
+        x = time.copy()
+        y = conductance.copy()
+        z = illumination.copy()
+
+        # strip error values at head and tail (time and noise floor)
+        j = np.where( (x > 0.) & (y > 5e-4) )
+        x = x[j]; y = y[j]; z = z[j]
+
+        # calculate first derivative
+        dy = savgol_filter(y, 15, 2, deriv = 1, mode = 'nearest')
+        ddy = savgol_filter(y, 15, 2, deriv = 2, mode = 'nearest')
+
+        # strip error values
+        j = np.where( (y > 1e-3) & (dy > 0.) )[0]
+        if len(j) > 0:
+            x = x[(j[-1]+1):]
+            y = y[(j[-1]+1):]
+            z = z[(j[-1]+1):]
+            dy = dy[(j[-1]+1):]
+            ddy = ddy[(j[-1]+1):]
+
+        k = np.where( (ddy == ddy.max()) )[0][0]
+        j = np.where( (ddy < 0.) & (x < x[k]) )[0]
+        if len(j) > 0:
+            x = x[(j[-1]+1):]
+            y = y[(j[-1]+1):]
+            z = z[(j[-1]+1):]
+
+        # update raw data
+        time = x
+        conductance = y
+        illumination = z
+
+
+
     # perform standard sinton lifetime measurement data processsing
     N_D, N_A, nd, tau, isuns, n_i_eff, ivoc = process_standard(_wafer_doping_type = wafer_doping_type,
                                                                _wafer_resistivity = wafer_resistivity,
