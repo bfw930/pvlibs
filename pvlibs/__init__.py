@@ -23,6 +23,8 @@ from .core import add_files
 ### updates for jupyter notebook orchestration
 from .nbks import init_file_db, parse_file_names, import_file_data, process_file_data
 from .nbks import select_node, plot_mlt_fit, save_mlt_fit, compile_data, save_all_data
+from .nbks import norm_pl_exposure, save_norm_pl, fix_pl, plot_ocpl, pl_hist_stats, save_pl_hist
+
 
 
 

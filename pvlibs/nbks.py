@@ -34,8 +34,15 @@ import glob
 # pandas dataframe
 import pandas as pd
 
+import numpy as np
+
 # matplotlib plotting library
 import matplotlib.pyplot as plt
+
+# python image library
+import PIL
+
+from scipy import ndimage
 
 
 
@@ -560,6 +567,301 @@ def save_all_data(db, file_name_head, params, outputs = None):
 
 
 
+''' pl image processing '''
+
+def norm_pl_exposure(db, ref_exp = 1.):
+
+    ''' Normalise PL Images
+
+    Args:
+        db (list): database instance as list of file nodes (dict)
+        ref_exp (float): reference exposure for normalisation
+
+    Returns:
+        (none): imported data added to each node in database instance
+    '''
+
+    print('begin pl image normalisation \n')
+
+    # iterate each node in database
+    for i in range(len(db)):
+        node = db[i]
+
+        print('processing: measurement {}/{}'.format(i+1, len(db)))
+
+        try:
+
+            # update node with additional parameters
+            node['norm_exposure'] = ref_exp
 
 
-# rotate (align) and zero (top left) images, crop to wafer area (remove background)
+            # normalise pl images by exposure
+            node['norm_img'] = ((node['raw_img'].astype(np.float64) * node['exposure']) / ref_exp)
+
+
+        # on data import error
+        except:
+            print('failed to process measurement: {}'.format(node['file_name']))
+
+
+    print('\nnormalisation complete')
+
+
+    # discard any nodes where failed to parse parameters by filter on first data entry
+    db = [ d for d in db if 'norm_img' in d.keys() ]
+
+    print('\n{} measurements processed'.format(len(db)))
+
+    return db
+
+
+
+def save_norm_pl(db, file_name_head, params):
+
+    ''' Save Normalised PL Images
+
+    Args:
+        db (list): database instance as list of file nodes (dict)
+        file_name_head (str): header inc path for output file name
+        params (list): ordered list of parameters to use in output file name
+
+    Returns:
+        (none): images saved to disk
+    '''
+
+    # iterate all nodes in database
+    for node in db:
+
+        # build output file name from params
+        file_name = '{}-{}.tif'.format(file_name_head, '-'.join([ node[p] for p in params ]))
+
+
+        # convert normalised image array to tif image
+        img = PIL.Image.fromarray(node['norm_img'].astype(np.uint16))
+
+        # save tif image to file
+        img.save(file_name)
+
+
+        print('image saved to file: {}'.format(file_name))
+
+
+
+
+def fix_pl(db, params):
+
+    ''' Fix PL Images
+
+    Args:
+        db (list): database instance as list of file nodes (dict)
+        params (list): config parameters to use in image adjustment
+
+    Returns:
+        (none): figure saved to disk
+    '''
+
+    print('begin pl image adjustment \n')
+
+    # iterate each node in database
+    for i in range(len(db)):
+        node = db[i]
+
+        print('processing: measurement {}/{}'.format(i+1, len(db)))
+
+        try:
+
+            # get normalised image data
+            img = node['norm_img']
+
+            # rotate (align) and zero (top left) images, crop to wafer area (remove background)
+            img = process_data.photoluminescence_image.rotate_zero_image(img,
+                _angle_lim = params['angle_lim'],
+                _angle_step = params['angle_step'],
+                _edge = params['edge'],
+            )
+
+            # store trimmed image
+            node['trim_img'] = img
+
+
+        # on data import error
+        except:
+            print('failed to process measurement: {}'.format(node['file_name']))
+
+
+    print('\nadjustments complete')
+
+
+    # discard any nodes where failed to parse parameters by filter on first data entry
+    db = [ d for d in db if 'trim_img' in d.keys() ]
+
+    print('\n{} measurements processed'.format(len(db)))
+
+    return db
+
+
+
+def plot_ocpl(db, params):
+
+    ''' Plot Sinton Lifetime Model Fit
+
+    Args:
+        db (list): database instance as list of file nodes (dict)
+        params (dict): node containing sinton lifetime model fit data
+
+    Returns:
+        (none): figure displayed
+    '''
+
+    # get selected node by first parameter match in database
+    _node = select_node(db, params)
+
+    ## need to ensure found a node, else fail gracefully
+
+
+    # diplay images
+    _w = 9; _h = 5; fig = plt.figure(figsize = (_w, _h))
+    fig.canvas.layout.width = '{}in'.format(_w); fig.canvas.layout.height= '{}in'.format(_h)
+    #plt.xticks([]); plt.yticks([])
+    ax = []; ax.append(fig.add_subplot(121)); ax.append(fig.add_subplot(122))
+
+
+    ax[0].imshow(_node['raw_img'], cmap = 'magma')
+    ax[0].set_xticks([]); ax[0].set_yticks([])
+
+    ax[1].imshow(_node['trim_img'], cmap = 'magma')
+    ax[1].set_xticks([]); ax[1].set_yticks([])
+
+
+    plt.tight_layout()
+
+    plt.show()
+
+
+
+
+
+def pl_hist_stats(db, params):
+
+    ''' Fix PL Images
+
+    Args:
+        db (list): database instance as list of file nodes (dict)
+        params (list): config parameters to use in image adjustment
+
+    Returns:
+        (none): figure saved to disk
+    '''
+
+    print('begin stats calc \n')
+
+    # iterate each node in database
+    for i in range(len(db)):
+        node = db[i]
+
+        print('processing: measurement {}/{}'.format(i+1, len(db)))
+
+        try:
+
+            # get normalised image data
+            img = node['trim_img']
+
+
+            # set histogram parameters
+            _min = 0.1
+            _max = np.max(img)
+
+            bins = params['bins']
+
+            # make histogram bins
+            x = np.linspace(_min, _max, bins)
+
+            # calculate histogram of image data (photoluminescence counts)
+            hist = ndimage.measurements.histogram(img, _min, _max, bins)
+
+            # calculate area normalised histogram (fraction pixels)
+            hist_frac = hist / ( (img.shape[0] * img.shape[1]) )
+
+
+            # store histogram data
+            node['hist_bins'] = x
+            node['hist_cnts'] = hist
+            node['hist_norm'] = hist_frac
+
+
+            # calculate and store statistics
+            node['med'] = np.median(img)
+            node['avg'] = np.mean(img)
+            node['std'] = np.std(img)
+
+
+        # on data import error
+        except:
+            print('failed to process measurement: {}'.format(node['file_name']))
+
+
+    print('\nstats calc complete')
+
+
+    # discard any nodes where failed to parse parameters by filter on first data entry
+    db = [ d for d in db if 'trim_img' in d.keys() ]
+
+    print('\n{} measurements processed'.format(len(db)))
+
+    return db
+
+
+
+
+
+def save_pl_hist(db, file_name_head, params):
+
+    ''' Plot and Save PL Histograms
+
+    Args:
+        db (list): database instance as list of file nodes (dict)
+        file_name_head (str): header inc path for output file name
+        params (list): ordered list of parameters to use in plot output file name
+
+    Returns:
+        (none): figure saved to disk
+    '''
+
+    # iterate all nodes in database
+    for node in db:
+
+        # diplay images
+        _w = 7; _h = 5; fig = plt.figure(figsize = (_w, _h))
+        fig.canvas.layout.width = '{}in'.format(_w); fig.canvas.layout.height= '{}in'.format(_h)
+        #plt.xticks([]); plt.yticks([])
+
+        plt.xlabel('Photoluminescence Intensity (Cnts.)')
+        plt.ylabel('Area Fraction')
+
+
+        x = node['hist_bins']
+        hist = node['hist_norm']
+        #hist = node['hist_cnts']
+
+        # stem plot histogram
+        st = plt.stem(x, hist, linefmt = '-', markerfmt = '-', basefmt = 'k-', use_line_collection = True)
+
+        m = node['med']
+        plt.vlines(m, 0., np.max(hist)*1.1, colors = 'r')
+
+        s = node['std']
+        plt.vlines([m-s, m+s], 0., np.max(hist)*1.1, colors = 'k', linestyles = '--', alpha = 0.5)
+
+
+        # display figure
+        plt.tight_layout()
+
+        # build plot output file name from params
+        file_name = '{}-{}.png'.format(file_name_head, '-'.join([ node[p] for p in params ]))
+
+        plt.savefig(file_name)
+
+        plt.close()
+
+
+        print('plot saved to file: {}'.format(file_name))
