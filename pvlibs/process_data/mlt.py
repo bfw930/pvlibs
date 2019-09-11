@@ -340,7 +340,7 @@ def mlt(data):
                                            _N_c_i = N_c_i, _N_v_i = N_v_i, _n_i = n_i, _n_i_0 = n_i_0, _n_0 = n_0,
                                            _p_0 = p_0)
 
-    data = {'n_i_eff': n_i_eff, 'tau_rad': tau_rad, 'tau_aug': tau_aug, 'dn': dn}
+    _data = {'n_i_eff': n_i_eff, 'tau_rad': tau_rad, 'tau_aug': tau_aug, 'dn': dn}
 
 
 
