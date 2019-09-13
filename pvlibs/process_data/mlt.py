@@ -290,17 +290,23 @@ def mlt(data):
 
 
     # define model, initial parameter values, parameter limits; (log values for parameters)
-    model = {'aug':{}, 'rad':{},
-             'sdr':{'params':['J_0'],
-                    'inits':[-14],
-                    'limits':[ [-18, -10] ]},
-             'srh':{'params':['t_m0', 't_M0'],
-                    'inits':[-4, -4],
-                    'limits':[ [-7, -1], [-7, -1] ]},
-             #'sdr2':{'params':['J_02'],
-             #       'inits':[-12],
-             #       'limits':[ [-16, -10] ]},
-            }
+
+    if 'model' in data.keys():
+        model = data['model']
+
+
+    else:
+        model = {'aug':{}, 'rad':{},
+                 'sdr':{'params':['J_0'],
+                        'inits':[-14],
+                        'limits':[ [-18, -10] ]},
+                 'srh':{'params':['t_m0', 't_M0'],
+                        'inits':[-4, -4],
+                        'limits':[ [-7, -1], [-7, -1] ]},
+                 #'sdr2':{'params':['J_02'],
+                 #       'inits':[-12],
+                 #       'limits':[ [-16, -10] ]},
+                }
 
 
     # prepare model and params for optimisation

@@ -569,7 +569,7 @@ def save_all_data(db, file_name_head, params, outputs = None):
 
 ''' pl image processing '''
 
-def norm_pl_exposure(db, ref_exp = 1.):
+def norm_pl_exposure(db, ref_exp = None):
 
     ''' Normalise PL Images
 
@@ -582,6 +582,11 @@ def norm_pl_exposure(db, ref_exp = 1.):
     '''
 
     print('begin pl image normalisation \n')
+
+
+    # if not passed reference exposure value, find max
+    if ref_exp is None:
+        ref_exp = max([n['exposure'] for n in db])
 
     # iterate each node in database
     for i in range(len(db)):
@@ -767,6 +772,11 @@ def pl_hist_stats(db, params):
             img = node['trim_img']
 
 
+            if 'floor' in params.keys():
+                j = np.where(img >= params['floor'])
+                img = img[j]
+
+
             # set histogram parameters
             _min = 0.1
             _max = np.max(img)
@@ -780,7 +790,8 @@ def pl_hist_stats(db, params):
             hist = ndimage.measurements.histogram(img, _min, _max, bins)
 
             # calculate area normalised histogram (fraction pixels)
-            hist_frac = hist / ( (img.shape[0] * img.shape[1]) )
+            #hist_frac = hist / ( (img.shape[0] * img.shape[1]) )
+            hist_frac = hist / img.shape[0]
 
 
             # store histogram data
