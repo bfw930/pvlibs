@@ -352,8 +352,8 @@ def plot_mlt_fit(db, params):
 
 
     # format figure axes
-    ax.set_xlim(5e13, 5e16)
-    ax.set_ylim(5e1, 5e6)
+    #ax.set_xlim(5e13, 5e16)
+    #ax.set_ylim(5e1, 5e6)
 
     ax.set_xscale('log')
     ax.set_yscale('log')
@@ -414,8 +414,8 @@ def save_mlt_fit(db, file_name_head, params):
 
 
         # format figure axes
-        ax.set_xlim(5e13, 5e16)
-        ax.set_ylim(5e1, 5e6)
+        #ax.set_xlim(5e13, 5e16)
+        #ax.set_ylim(5e1, 5e6)
 
         ax.set_xscale('log')
         ax.set_yscale('log')
