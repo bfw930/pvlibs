@@ -769,7 +769,7 @@ def pl_hist_stats(db, params):
         try:
 
             # get normalised image data
-            img = node['trim_img']
+            img = node['norm_img']
 
 
             if 'floor' in params.keys():
