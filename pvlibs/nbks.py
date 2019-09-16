@@ -601,7 +601,7 @@ def norm_pl_exposure(db, ref_exp = None):
 
 
             # normalise pl images by exposure
-            node['norm_img'] = ((node['raw_img'].astype(np.float64) * node['exposure']) / ref_exp)
+            node['norm_img'] = ((node['raw_img'].astype(np.float64)  * ref_exp / node['exposure']))
 
 
         # on data import error
