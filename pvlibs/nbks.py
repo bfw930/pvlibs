@@ -815,7 +815,7 @@ def pl_hist_stats(db, params):
 
 
     # discard any nodes where failed to parse parameters by filter on first data entry
-    db = [ d for d in db if 'trim_img' in d.keys() ]
+    db = [ d for d in db if 'norm_img' in d.keys() ]
 
     print('\n{} measurements processed'.format(len(db)))
 
