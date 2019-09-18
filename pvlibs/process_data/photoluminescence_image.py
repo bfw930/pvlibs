@@ -144,6 +144,71 @@ def rotate_zero_image(_img, _angle_lim = 1.5, _angle_step = 0.1, _edge = .1):
 
 
 
+def get_angle_edges(_img, _angle_lim = 1.5, _angle_step = 0.1, _edge = .1):
+
+
+    #pad_img = np.pad(_img, ((20,20),(20,20)), 'constant')
+
+    top = []; bottom = []; left = []; right = []
+    angles = np.arange(-_angle_lim, _angle_lim, _angle_step)
+    for i in range(len(angles)):
+
+        #img = _img/_img.max()
+
+        img = ndimage.interpolation.rotate(_img, angles[i], reshape = False, mode = 'nearest')
+        img = ndimage.morphological_laplace(img, 5)
+
+        h_line = np.mean(img, axis = 1)
+        v_line = np.mean(img, axis = 0)
+
+        h_line = savgol_filter(x = h_line, window_length = 15, polyorder = 2, mode = 'mirror', deriv = 0)
+        v_line = savgol_filter(x = v_line, window_length = 15, polyorder = 2, mode = 'mirror', deriv = 0)
+
+        j = np.where( h_line == h_line[:int(h_line.shape[0]*_edge)].min() )[0][0]
+        top.append( [ h_line[ j ], j, angles[i] ] )
+
+        j = np.where( h_line == h_line[-int(h_line.shape[0]*_edge):].min() )[0][0]
+        bottom.append( [ h_line[ j ], j, angles[i] ] )
+
+        j = np.where( v_line == v_line[:int(v_line.shape[0]*_edge)].min() )[0][0]
+        left.append( [ v_line[ j ], j, angles[i] ] )
+
+        j = np.where( v_line == v_line[-int(v_line.shape[0]*_edge):].min() )[0][0]
+        right.append( [ v_line[ j ], j, angles[i] ] )
+
+    top = np.stack(top, axis = 0)
+    bottom = np.stack(bottom, axis = 0)
+    left = np.stack(left, axis = 0)
+    right = np.stack(right, axis = 0)
+
+
+    # get average of edges
+    avg = []
+    sets = [top, bottom, left, right]
+    for i in range(len(sets)):
+        _set = sets[i][np.argsort(sets[i][:,2]),:]
+        avg.append(_set[:, 0])
+    avg = np.median( np.vstack(avg).T, axis = 1)
+
+
+    sy = savgol_filter(x = avg, window_length = 15, polyorder = 2, mode = 'mirror', deriv = 0)
+    j = np.where(sy == sy.min())[0]
+    angle = sets[0][j, 2][0]
+    edges = [ s[j, 1] for s in sets ]
+
+
+    # rotate image by reverse angle
+    #img = ndimage.interpolation.rotate(_img, angle, reshape = False, mode = 'nearest')
+
+    # crop image to edges
+    #img = img[ int(edges[0]):int(edges[1]), int(edges[2]):int(edges[3]) ]
+
+
+    #return img
+    return angle, edges
+
+
+
 def rotate_zero_shift_image(_img, _angle_lim = 1.5, _angle_step = 0.1, _edge = .1):
 
     top = []; bottom = []; left = []; right = []
