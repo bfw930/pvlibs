@@ -335,7 +335,7 @@ def plot_mlt_fit(db, params):
 
     # print selected model fit parameters
     print('Implied Open Circuit Voltage (iVoc) = {:.1f} [mV]'.format(_node['ivoc']*1e3))
-    print('Surface Recombination Velocity (J_0) = {:.1f} [fa]'.format(_node['J_0']*1e15))
+    print('Emitter Recombination Current Density (J_0) = {:.1f} [fA/cm^2]'.format(_node['J_0']*1e15))
     print('Effective Lifetime = {:.1f} [us]'.format(_node['t_eff']*1e6))
     print('Bulk Lifetime = {:.1f} [us]'.format(_node['t_blk']*1e6))
     print('SRH K-value = {:.2f} []'.format(_node['k_val']))
@@ -359,7 +359,7 @@ def plot_mlt_fit(db, params):
     ax.set_yscale('log')
 
     ax.set_xlabel(r'Charge Density (cm$^{-3}$)')
-    ax.set_ylabel(r'Inverse Carrier Lifetime (s)')
+    ax.set_ylabel(r'Inverse Carrier Lifetime (s^-1)')
 
 
     # plot measured charge density dependent effective lifetime
@@ -421,7 +421,7 @@ def save_mlt_fit(db, file_name_head, params):
         ax.set_yscale('log')
 
         ax.set_xlabel(r'Charge Density (cm$^{-3}$)')
-        ax.set_ylabel(r'Inverse Carrier Lifetime (s)')
+        ax.set_ylabel(r'Inverse Carrier Lifetime (s^-1)')
 
 
         # plot measured charge density dependent effective lifetime
