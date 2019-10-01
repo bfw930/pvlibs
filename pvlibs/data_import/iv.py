@@ -128,9 +128,10 @@ def type_halm_500(file_path):
                             for i in range(ranges[r][0] + 1, ranges[r][1])
                             if '#INF' not in lines[i]])[:,-3:][::-1,:]
         data[labels[r]] = {}
-        data[labels[r]]['voltage'] = d[:,0]
-        data[labels[r]]['current'] = -d[:,1]
-        data[labels[r]]['intensity'] = d[:,2]
+        data[labels[r]]['voltage'] = d[:,-3]
+        data[labels[r]]['current'] = -d[:,-2]
+        data[labels[r]]['intensity'] = d[:,-1]*1e-3
+        #data[labels[r]] = d[:,:]
 
 
     # return data dict

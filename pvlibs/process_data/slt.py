@@ -31,6 +31,8 @@ from .charge_density import calc_wafer_nonequilibrium
 
 from scipy.stats import linregress
 
+from scipy.interpolate import splev, splrep
+
 
 
 
@@ -178,7 +180,7 @@ def process_standard(_wafer_doping_type, _wafer_resistivity, _wafer_thickness, _
         for dn in nd ])[:,2]
 
     # calculate implied Voc
-    ivoc = ( (1.381e-23 * _temperature / 1.602e-19) * np.log(nd * (N_M + nd) / (n_i_eff**2)) )
+    ivocs = ( (1.381e-23 * _temperature / 1.602e-19) * np.log(nd * (N_M + nd) / (n_i_eff**2)) )
 
 
     # get charge density at 1 sun
@@ -187,19 +189,71 @@ def process_standard(_wafer_doping_type, _wafer_resistivity, _wafer_thickness, _
     # handle case for isuns max less than 1 sun
     if len(j) > 0:
         k = len(isuns) - j[0] - 1
-        ivoc = ivoc[k]
+        ivoc = ivocs[k]
 
     else:
         # linear regression for ivoc at 1 sun
         x = np.log(isuns)
-        y = ivoc
+        y = ivocs
         j = np.where((x > -5))
         m, b, std, err1, err2 = linregress(x = x[j], y = y[j])
         ivoc = b
 
 
+    ''' pseudo-FF calc '''
+
+
+    # sort data
+    j = np.argsort(ivocs)
+    _ivocs = ivocs[j]
+    _isuns = isuns[j]
+
+    # get 1 sun voc
+    spl = splrep(_isuns, _ivocs)
+    voc = splev(1., spl, der = 0)
+
+    # extrapolate suns-voc from log-linear regression
+    slope, icept, err1, err1, err3 = linregress(_ivocs, np.log(_isuns))
+    V = np.arange(.1, .8, .01)
+    iss = np.exp(slope*V + icept)
+
+    I = -(iss-1)
+    P = I*V
+
+    j = np.where(I >= 0.)
+    I = I[j]
+    V = V[j]
+    P = P[j]
+
+
+    # rough maximum power point
+    k = np.where(P == P.max())
+    Vj = V[j][k]
+
+    # b-pline fit around maximum power point (rel. power)
+    k = np.where( (V[j] > Vj-0.1) & (V[j] < Vj+0.1) )
+    spl = splrep( V[j][k], P[k], )
+
+    # derivative of power at maximum power point
+    xr = np.arange(Vj-0.05, Vj+0.025, .001)
+    dP = splev(xr, spl, der = 1)
+
+    # linear regression for maximum power point voltage
+    slope, icept, r_value, p_value, std_err = linregress(dP, xr)
+    Vmpp = icept
+
+    # power at maximum power point
+    Pmpp = splev(Vmpp, spl, der = 0)
+
+    # b-pline fit around maximum power point (rel. power)
+    spl = splrep(V, I)
+    Impp = splev(Vmpp, spl, der = 0)
+
+    pFF = Impp*Vmpp/(1.*voc)
+
+
     # return calculated results
-    return N_D, N_A, nd, tau, isuns, n_i_eff, ivoc
+    return N_D, N_A, nd, tau, isuns, n_i_eff, ivoc, ivocs, pFF
 
 
 
@@ -327,7 +381,7 @@ def slt(data):
 
 
     # perform standard sinton lifetime measurement data processsing
-    N_D, N_A, nd, tau, isuns, n_i_eff, ivoc = process_standard(_wafer_doping_type = wafer_doping_type,
+    N_D, N_A, nd, tau, isuns, n_i_eff, ivoc, ivocs, pFF = process_standard(_wafer_doping_type = wafer_doping_type,
                                                                _wafer_resistivity = wafer_resistivity,
                                                                _wafer_thickness = wafer_thickness,
                                                                _wafer_optical_const = wafer_optical_const,
@@ -336,10 +390,11 @@ def slt(data):
                                                                _conductance = conductance,
                                                                _illumination = illumination)
 
-    results = {'N_D': N_D, 'N_A': N_A, 'nd': nd, 'tau': tau, 'isuns': isuns, 'n_i_eff': n_i_eff, 'ivoc': ivoc}
+    results = {'N_D': N_D, 'N_A': N_A, 'nd': nd, 'tau': tau, 'isuns': isuns, 'n_i_eff': n_i_eff, 'ivoc': ivoc,
+        'ivocs': ivocs, 'pFF': pFF}
 
 
-    data['calc_wafer_resistivity'] = data['dark_res'] * wafer_thickness
+    results['calc_wafer_resistivity'] = data['dark_res'] * wafer_thickness
 
 
     # return calculated results

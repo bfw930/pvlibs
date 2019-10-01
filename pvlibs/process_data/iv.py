@@ -21,6 +21,9 @@ import numpy as np
 # simple linear regression
 from scipy.stats import linregress
 
+# b-spline interpolation
+from scipy.interpolate import splev, splrep
+
 
 # database search functions
 from .. import database
@@ -29,7 +32,7 @@ from .. import database
 
 ''' Core Calculation Functions '''
 
-def calc_performance(_data, _params):
+def calc_performance_bak(_data, _params):
 
     ''' Calculate Doping Density
 
@@ -95,6 +98,120 @@ def calc_performance(_data, _params):
 
     # return calculation results
     return calc_params
+
+
+
+def calc_performance(_data, _params):
+
+    ''' Calculate Doping Density
+
+        Calculate device performance from 1 sun current-voltage measurement
+
+    Args:
+        _data (dict): 1 sun current-voltage measurement node data
+        _params (dict): required device node parameters
+
+    Returns:
+        dict: calculated derivative data
+    '''
+
+    calc_params = {}
+
+    # unpack required device parameters
+    A = _params['wafer_area']
+    calc_params['area'] = A
+
+
+    # get current, voltage under 1 sun illumination
+    l = 'full'
+    V = _data['voltage']
+    I = _data['current']
+
+    # sort data on voltage (start low)
+    j = np.argsort(V)
+    V = V[j]
+    I = I[j]
+
+    # adjust current for positive in reverse bias
+    if I[0] < 0:
+        I = -I
+
+
+    ''' short circuit '''
+
+    # calculate Isc from linear regression about -0.2 < V < 0.2
+    j = np.where( (V > -0.2) & (V < 0.2) )
+    slope, icept, r_value, p_value, std_err = linregress(V[j], I[j])
+    Isc = icept
+
+
+    ''' open circuit '''
+
+    # calculate Isc from linear regression about -0.2 < V < 0.2
+    j = np.where( (I > -0.5) & (I < 0.5) )
+    slope, icept, r_value, p_value, std_err = linregress(I[j], V[j])
+    Voc = icept
+
+
+    ''' maximum power point '''
+
+    # power in forward bias region
+    j = np.where( (V < Voc) & (V > 0.) )
+    P = I[j]*V[j]
+
+    # rough maximum power point
+    k = np.where(P == P.max())
+    Vj = V[j][k]
+
+    # b-pline fit around maximum power point (rel. power)
+    k = np.where( (V[j] > Vj-0.1) & (V[j] < Vj+0.1) )
+    spl = splrep( V[j][k], P[k], )
+
+    # derivative of power at maximum power point
+    xr = np.arange(Vj-0.05, Vj+0.025, .001)
+    dP = splev(xr, spl, der = 1)
+
+    # linear regression for maximum power point voltage
+    slope, icept, r_value, p_value, std_err = linregress(dP, xr)
+    Vmpp = icept
+
+    # b-pline fit around maximum power point (rel. current)
+    spl = splrep( V[j][k], I[j][k], )
+
+    # derivative of power at maximum power point current
+    Impp = float( splev(Vmpp, spl) )
+
+    # power at maximum power point
+    Pmpp = Vmpp*Impp
+
+
+    ''' solar performance '''
+
+    # calculate fill factor
+    FF = Pmpp/(Isc*Voc)
+
+    # calculate solar conversion efficiency
+    Eta = (Isc*Voc*FF)/A
+
+
+    # pack data
+    calc_params = {
+        'current': I,
+        'voltage': V,
+        'area': A,
+        'isc': Isc,
+        'voc': Voc,
+        'pmpp': Pmpp,
+        'impp': Impp,
+        'vmpp': Vmpp,
+        'ff': FF,
+        'eta': Eta,
+    }
+
+
+    # return calculation results
+    return calc_params
+
 
 
 
@@ -308,3 +425,156 @@ def iv(data):
 
     # return calculated results
     return results
+
+
+
+
+
+''' convergence of series resistance
+ref doi 10.1016/j.solener.2018.01.047
+
+
+# thermal voltage
+def Vt_(T):
+    q = 1.602e-19 # [C]
+    kB = 1.38e-23 # [J/K]
+    return kB*T/q
+
+# factor for relative diode saturation currents
+def K_(T):
+    return (T**(2/5)) / 3.77
+
+# diode rectification at open circuit
+def Xoc_(Voc, a, Vt):
+    return np.exp(Voc/(a*Vt))
+
+# diode rectification at maximum power point
+def Xmpp_(Vmpp, Rs, Impp, a):
+    return np.exp((Vmpp + Rs*Impp)/(a*Vt))
+
+# diode rectification at short circuit
+def Xsc_(Rs, Isc, a):
+    return np.exp((Rs*Isc)/(a*Vt))
+
+# first diode saturation current
+def Is1_(Voc, Isc, Impp, Vmmp, Rs, Xmpp1, K, Xmpp2, Xoc1, Xoc2):
+    return (Voc*(Isc - Impp) - Vmmp*Isc) / (Voc*(Xmpp1 + K*Xmpp2) - Vmpp*(Xoc1 + K*Xoc2))
+
+# second diode saturation current
+def Is2_(K, Is1):
+    return K*Is1
+
+# generation current under illumination
+def Iph_(Voc, Impp, Is1, Xmpp1, K, Xmpp2, Vmpp, Xoc1, Xoc2):
+    return (Voc*Impp + Is1*(Voc*(Xmpp1 + K*Xmpp2) - Vmpp*(Xoc1 - K*Xoc2))) / (Voc - Vmpp)
+
+# shunt resistance
+def Rsh_(Vmpp, Impp, Rs, Iph, Is1, Xmpp1, Is2, Xmpp2):
+    return (Vmpp + Impp*Rs) / (Iph - Impp - Is1*(Xmpp1 - 1) - Is2*(Xmpp2 - 1))
+
+# series resistance
+def Rs_(Vmpp, Impp, Is1, a1, Vt, Xmpp1, Is2, a2, Xmpp2, Rsh):
+    return (Vmpp/Impp) - (1/((Is1/(a1*Vt))*Xmpp1 + (Is2/(a2*Vt))*Xmpp2 + (1/Rsh)))
+
+
+
+
+
+
+# define measurement conditions
+#T = 298.15 # [K]
+
+# thermal voltage
+Vt = Vt_(T)
+
+# factor for relative diode saturation currents
+K = K_(T)
+
+# define diode ideality factors
+a1 = 1.26
+a2 = 2.84
+
+# set initial series resistance
+Rs = 0.0
+
+
+## iterate series resistance calculation until convergence
+eps = 1e-5
+dRs = 1.
+while dRs > eps:
+
+    #print('\n Initial Rs {:.4f}\n'.format(Rs))
+
+    # update series resistance
+    Rs += eps
+
+    # diode rectification at open circuit
+    Xoc1 = Xoc_(Voc, a1, Vt)
+    Xoc2 = Xoc_(Voc, a2, Vt)
+
+    #print('\tXoc1 {:.1e}'.format(Xoc1))
+    #print('\tXoc2 {:.1e}'.format(Xoc2))
+
+    # diode rectification at maximum power point
+    Xmpp1 = Xmpp_(Vmpp, Rs, Impp, a1)
+    Xmpp2 = Xmpp_(Vmpp, Rs, Impp, a2)
+
+    #print('\tXmpp1 {:.1e}'.format(Xmpp1))
+    #print('\tXmpp2 {:.1e}'.format(Xmpp2))
+
+    # diode rectification at short circuit
+    Xsc1 = Xsc_(Rs, Isc, a1)
+    Xsc2 = Xsc_(Rs, Isc, a2)
+
+    #print('\tXsc1 {:.1e}'.format(Xsc1))
+    #print('\tXsc2 {:.1e}'.format(Xsc2))
+
+
+    # first diode saturation current
+    Is1 = Is1_(Voc, Isc, Impp, Vmpp, Rs, Xmpp1, K, Xmpp2, Xoc1, Xoc2)
+
+    #print('\tIs1 {:.2e}'.format(Is1))
+
+    # second diode saturation current
+    Is2 = Is2_(K, Is1)
+
+    #print('\tIs2 {:.2e}'.format(Is2))
+
+
+    # generation current under illumination
+    Iph = Iph_(Voc, Impp, Is1, Xmpp1, K, Xmpp2, Vmpp, Xoc1, Xoc2)
+
+    #print('\tIph {:.2f}'.format(Iph))
+
+
+    # shunt resistance
+    Rsh = Rsh_(Vmpp, Impp, Rs, Iph, Is1, Xmpp1, Is2, Xmpp2)
+
+    #print('\tRsh {:.3f}'.format(Rsh))
+
+
+    # calculate updated series resistance
+    _Rs = Rs_(Vmpp, Impp, Is1, a1, Vt, Xmpp1, Is2, a2, Xmpp2, Rsh)
+
+    #print('Calculated Rs {:.4f}\n'.format(_Rs))
+
+    # check for convergence
+    dRs = Rs - _Rs
+
+    #print('Rs {:.5f}, _Rs {:.5f}, dRs {:.1e}'.format(Rs, _Rs, dRs))
+
+    # update series resistance
+    #Rs = _Rs
+    #Rs += eps
+
+
+print('\nRs {:.4f}'.format(Rs))
+print('Rsh {:.2f}'.format(Rsh))
+print('Is1 {:.2e}'.format(Is1))
+print('Is2 {:.2e}'.format(Is2))
+
+
+
+
+
+'''
