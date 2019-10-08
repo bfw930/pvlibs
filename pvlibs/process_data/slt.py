@@ -202,54 +202,58 @@ def process_standard(_wafer_doping_type, _wafer_resistivity, _wafer_thickness, _
 
     ''' pseudo-FF calc '''
 
+    if False:
 
-    # sort data
-    j = np.argsort(ivocs)
-    _ivocs = ivocs[j]
-    _isuns = isuns[j]
+        # sort data
+        j = np.argsort(ivocs)
+        _ivocs = ivocs[j]
+        _isuns = isuns[j]
 
-    # get 1 sun voc
-    spl = splrep(_isuns, _ivocs)
-    voc = splev(1., spl, der = 0)
+        # get 1 sun voc
+        spl = splrep(_isuns, _ivocs)
+        voc = splev(1., spl, der = 0)
 
-    # extrapolate suns-voc from log-linear regression
-    slope, icept, err1, err1, err3 = linregress(_ivocs, np.log(_isuns))
-    V = np.arange(.1, .8, .01)
-    iss = np.exp(slope*V + icept)
+        # extrapolate suns-voc from log-linear regression
+        slope, icept, err1, err1, err3 = linregress(_ivocs, np.log(_isuns))
+        V = np.arange(.1, .8, .01)
+        iss = np.exp(slope*V + icept)
 
-    I = -(iss-1)
-    P = I*V
+        I = -(iss-1)
+        P = I*V
 
-    j = np.where(I >= 0.)
-    I = I[j]
-    V = V[j]
-    P = P[j]
+        j = np.where(I >= 0.)
+        I = I[j]
+        V = V[j]
+        P = P[j]
 
 
-    # rough maximum power point
-    k = np.where(P == P.max())
-    Vj = V[j][k]
+        # rough maximum power point
+        k = np.where(P == P.max())
+        Vj = V[j][k]
 
-    # b-pline fit around maximum power point (rel. power)
-    k = np.where( (V[j] > Vj-0.1) & (V[j] < Vj+0.1) )
-    spl = splrep( V[j][k], P[k], )
+        # b-pline fit around maximum power point (rel. power)
+        k = np.where( (V[j] > Vj-0.1) & (V[j] < Vj+0.1) )
+        spl = splrep( V[j][k], P[k], )
 
-    # derivative of power at maximum power point
-    xr = np.arange(Vj-0.05, Vj+0.025, .001)
-    dP = splev(xr, spl, der = 1)
+        # derivative of power at maximum power point
+        xr = np.arange(Vj-0.05, Vj+0.025, .001)
+        dP = splev(xr, spl, der = 1)
 
-    # linear regression for maximum power point voltage
-    slope, icept, r_value, p_value, std_err = linregress(dP, xr)
-    Vmpp = icept
+        # linear regression for maximum power point voltage
+        slope, icept, r_value, p_value, std_err = linregress(dP, xr)
+        Vmpp = icept
 
-    # power at maximum power point
-    Pmpp = splev(Vmpp, spl, der = 0)
+        # power at maximum power point
+        Pmpp = splev(Vmpp, spl, der = 0)
 
-    # b-pline fit around maximum power point (rel. power)
-    spl = splrep(V, I)
-    Impp = splev(Vmpp, spl, der = 0)
+        # b-pline fit around maximum power point (rel. power)
+        spl = splrep(V, I)
+        Impp = splev(Vmpp, spl, der = 0)
 
-    pFF = Impp*Vmpp/(1.*voc)
+        pFF = Impp*Vmpp/(1.*voc)
+
+    # temp
+    pFF = .99
 
 
     # return calculated results
