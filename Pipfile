@@ -23,6 +23,7 @@ umap-learn = "*"
 numba = "*"
 xlrd = "*"
 torchvision = "*"
+pyspice = "*"
 
 [requires]
 python_version = "3.7"

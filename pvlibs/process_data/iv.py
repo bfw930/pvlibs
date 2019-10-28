@@ -32,75 +32,6 @@ from .. import database
 
 ''' Core Calculation Functions '''
 
-def calc_performance_bak(_data, _params):
-
-    ''' Calculate Doping Density
-
-        Calculate device performance from 1 sun current-voltage measurement
-
-    Args:
-        _data (dict): 1 sun current-voltage measurement node data
-        _params (dict): required device node parameters
-
-    Returns:
-        dict: calculated derivative data
-    '''
-
-    calc_params = {}
-
-    # unpack required device parameters
-    A = _params['wafer_area']
-    calc_params['area'] = A
-
-    # get IV data
-    I = -_data['current'][::-1]
-    calc_params['current'] = I
-
-    V = _data['voltage'][::-1]
-    calc_params['voltage'] = V
-
-
-    # calculate short circuit current
-    j = np.where(V < 0)[0][-1]
-    Isc = np.mean(I[j:j+2])
-    calc_params['isc'] = Isc
-
-
-    # calculate open circuit voltage
-    j = np.where(I > 0)[0][-1]
-    Voc = np.mean(V[j:j+2])
-    calc_params['voc'] = Voc
-
-
-    # calculate power at max power point
-    P = I * V
-    Pmpp = P.max()
-    calc_params['pmpp'] = Pmpp
-
-
-    # calculate current / voltage at max power point
-    j = np.where(P == Pmpp)[0][0]
-    Impp = I[j]
-    calc_params['impp'] = Impp
-    Vmpp = V[j]
-    calc_params['vmpp'] = Vmpp
-
-
-    # calculate fill factor
-    FF = Pmpp / (Isc * Voc)
-    calc_params['ff'] = FF
-
-
-    # calculate solar conversion efficiency
-    Eta = (Isc * Voc * FF) / (100 * A)
-    calc_params['eta'] = Eta
-
-
-    # return calculation results
-    return calc_params
-
-
-
 def calc_performance(_data, _params):
 
     ''' Calculate Doping Density
@@ -196,8 +127,8 @@ def calc_performance(_data, _params):
 
     # pack data
     calc_params = {
-        'current': I,
-        'voltage': V,
+        #'current': I,
+        #'voltage': V,
         'area': A,
         'isc': Isc,
         'voc': Voc,
@@ -231,16 +162,21 @@ def calc_shunt_resistance(_data, _params):
 
     calc_params = {}
 
-    # get IV data
-    I = -_data['current'][::-1]
-    #calc_params['current'] = I
+    V = _data['voltage']
+    I = _data['current']
 
-    V = _data['voltage'][::-1]
-    #calc_params['voltage'] = V
+    # sort data on voltage (start low)
+    j = np.argsort(V)
+    V = V[j]
+    I = I[j]
+
+    # adjust current for positive in reverse bias
+    if I[0] < 0:
+        I = -I
 
 
     # filter for only low reverse bias region
-    j = np.where( (V >= -3.) & (V <= 0.) )[0]
+    j = np.where( (V >= -5.) & (V <= -1.) )[0]
     I = I[j]
     V = V[j]
 
@@ -288,27 +224,41 @@ def calc_series_resistance(_full_data, _half_data, _params):
     calc_params = {}
 
 
-    # get IV data
-    I_f = -_full_data['current'][::-1]
-    V_f = _full_data['voltage'][::-1]
+    V_f = _full_data['voltage']
+    I_f = _full_data['current']
 
-    #calc_params['full_current'] = I_f
-    #calc_params['full_voltage'] = V_f
+    # sort data on voltage (start low)
+    j = np.argsort(V_f)
+    V_f = V_f[j]
+    I_f = I_f[j]
 
-
-    I_h = -_half_data['current'][::-1]
-    V_h = _half_data['voltage'][::-1]
-
-    #calc_params['half_current'] = I_h
-    #calc_params['half_voltage'] = V_h
+    # adjust current for positive in reverse bias
+    if I_f[0] < 0:
+        I_f = -I_f
 
 
-    # calculate short circuit current
-    j = np.where(V_f < 0)[0][-1]
-    Isc_f = get_x([V_f[j], I_f[j]], [V_f[j+1], I_f[j+1]], 0)
+    V_h = _half_data['voltage']
+    I_h = _half_data['current']
 
-    j = np.where(V_h < 0)[0][-1]
-    Isc_h = get_x([V_h[j], I_h[j]], [V_h[j+1], I_h[j+1]], 0)
+    # sort data on voltage (start low)
+    j = np.argsort(V_h)
+    V_h = V_h[j]
+    I_h = I_h[j]
+
+    # adjust current for positive in reverse bias
+    if I_h[0] < 0:
+        I_h = -I_h
+
+
+    # calculate Isc from linear regression about -0.2 < V < 0.2
+    j = np.where( (V_f > -0.2) & (V_f < 0.2) )
+    slope, icept, r_value, p_value, std_err = linregress(V_f[j], I_f[j])
+    Isc_f = icept
+
+    # calculate Isc from linear regression about -0.2 < V < 0.2
+    j = np.where( (V_h > -0.2) & (V_h < 0.2) )
+    slope, icept, r_value, p_value, std_err = linregress(V_h[j], I_h[j])
+    Isc_h = icept
 
 
     # set delta in I of 5% 1 sun Isc
@@ -372,27 +322,31 @@ def process_standard(device_state_params, full_data, half_data, dark_data):
     # aggregate data
     results = {**performance_data, **series, **shunt}
 
-    # current density
-    results['jsc'] = (results['isc']) / results['area']
-    results['jmpp'] = (results['impp']) / results['area']
+
+    if True:
+
+        # current density
+        results['jsc'] = (results['isc']) / results['area']
+        results['jmpp'] = (results['impp']) / results['area']
 
 
-    # calculate series adjusted area values [Ohm cm^2]
-    results['rs_sqr'] = results['rs'] * results['area'] * 1e3
-    results['rp_sqr'] = results['rp'] * results['area'] * 1e3
+        # calculate series adjusted area values [Ohm cm^2]
+        results['rs_sqr'] = results['rs'] * results['area'] * 1e3
+        results['rp_sqr'] = results['rp'] * results['area'] * 1e3
 
+    if False:
 
-    # Power Loss over Rs in mW/sqr (Ps = Rs x Jmpp^2)
-    results['loss_rs'] = (results['rs_sqr'] * 1e-3) * results['jmpp']**2
+        # Power Loss over Rs in mW/sqr (Ps = Rs x Jmpp^2)
+        results['loss_rs'] = (results['rs_sqr'] * 1e-3) * results['jmpp']**2
 
-    # Voltage over shunt resistor (Vp = Vmpp + Rs x Jmpp)
-    Vp = (results['vmpp'] * 1e-3) + ((results['rs_sqr'] * 1e-3) * results['jmpp'])
+        # Voltage over shunt resistor (Vp = Vmpp + Rs x Jmpp)
+        Vp = (results['vmpp'] * 1e-3) + ((results['rs_sqr'] * 1e-3) * results['jmpp'])
 
-    # Power loss over shunt resistor in mW/sqr (Pp = Vp^2 / Rp)
-    results['loss_rp'] = (Vp**2) / (results['rp_sqr'] * 1e-3)
+        # Power loss over shunt resistor in mW/sqr (Pp = Vp^2 / Rp)
+        results['loss_rp'] = (Vp**2) / (results['rp_sqr'] * 1e-3)
 
-    # The power loss in the diode due to the forward bias voltage in mW/sqr (Pf = Vp x (Jsc - Jmpp)
-    results['loss_mpp'] = Vp * (results['jsc'] - results['jmpp'])
+        # The power loss in the diode due to the forward bias voltage in mW/sqr (Pf = Vp x (Jsc - Jmpp)
+        results['loss_mpp'] = Vp * (results['jsc'] - results['jmpp'])
 
 
     # return calculated results
