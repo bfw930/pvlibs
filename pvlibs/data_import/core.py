@@ -148,6 +148,12 @@ def import_data_file(meas_type, file_type, file_path, file_name):
         # import data from file, return imported data
         data = loana(file_type = file_type, file_path = file_path, file_name = file_name)
 
+    # wavelabs measurement
+    if meas_type == 'wavelabs':
+
+        # import data from file, return imported data
+        data = iv(file_type = file_type, file_path = file_path, file_name = file_name)
+
 
     # return imported data
     return data

@@ -209,7 +209,7 @@ def get_angle_edges(_img, _angle_lim = 1.5, _angle_step = 0.1, _edge = .1):
 
 
 
-def rotate_zero_shift_image(_img, _angle_lim = 1.5, _angle_step = 0.1, _edge = .1):
+def rotate_zero_shift_image(_img, _angle_lim = 1.5, _angle_step = 0.1, _edge = .1, crop = False):
 
     top = []; bottom = []; left = []; right = []
     angles = np.arange(-_angle_lim, _angle_lim, _angle_step)
@@ -263,8 +263,9 @@ def rotate_zero_shift_image(_img, _angle_lim = 1.5, _angle_step = 0.1, _edge = .
     # shift image to top-left zero
     img = ndimage.interpolation.shift(_img, shift = [-int(edges[0]), -int(edges[2])], mode = 'nearest')
 
-    # crop image to edges
-    #img = img[ int(edges[0]):int(edges[1]), int(edges[2]):int(edges[3]) ]
+    if crop:
+        # crop image to edges
+        img = img[ int(edges[0]):int(edges[1]), int(edges[2]):int(edges[3]) ]
 
 
     return img
