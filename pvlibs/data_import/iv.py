@@ -188,8 +188,12 @@ def type_wavelabs(file_path):
 
 
     # set new step labels
-    relabel = {'1 sun': 'full', '1/2 sun': 'half', 'SunsVoc': 'suns_voc', 'UV light': 'uv', 'IR light': 'ir',
-        'dark': 'dark'}
+    relabel = {'1 sun': 'full', '1/2 sun': 'half', 'SunsVoc': 'suns_voc', 'UV light': 'uv', 'IR light': 'ir', 'dark': 'dark',
+
+        '1Sun Light I-V': 'full',
+        '0.8Sun Light I-V': 'half',
+        'Dark I-V': 'dark',
+            }
 
     # iterate and update unit labels
     for i in range(len(jv_data_steps)):

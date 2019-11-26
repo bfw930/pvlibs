@@ -354,7 +354,7 @@ def slt(data):
         z = illumination.copy()
 
         # strip error values at head and tail (time and noise floor)
-        j = np.where( (x > 0.) & (y > 5e-4) )
+        j = np.where( (x > 0.) & (y > 2e-4) )
         x = x[j]; y = y[j]; z = z[j]
 
         # calculate first derivative

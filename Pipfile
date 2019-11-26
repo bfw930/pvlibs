@@ -18,12 +18,8 @@ pillow = "*"
 ipympl = "*"
 ipywidgets = "*"
 seaborn = "*"
-hdbscan = "*"
-umap-learn = "*"
-numba = "*"
 xlrd = "*"
-torchvision = "*"
 pyspice = "*"
 
 [requires]
-python_version = "3.7"
+python_version = "3.8"
