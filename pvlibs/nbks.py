@@ -445,7 +445,7 @@ def save_mlt_fit(db, file_name_head, params):
         plt.tight_layout()
 
         # build plot output file name from params
-        file_name = '{}-{}.png'.format(file_name_head, '-'.join([ _node[p] for p in params ]))
+        file_name = '{}-{}.png'.format(file_name_head, '-'.join([ str(_node[p]) for p in params ]))
 
         # save plot to file
         plt.savefig(file_name, dpi = 150)
@@ -557,7 +557,7 @@ def save_all_data(db, file_name_head, params, outputs = None):
 
 
             # build plot output file name from params
-            file_name = '{}-{}-{}.csv'.format(file_name_head, out, '-'.join([ node[p] for p in params ]))
+            file_name = '{}-{}-{}.csv'.format(file_name_head, out, '-'.join([ str(node[p]) for p in params ]))
 
             # save summary data to file
             data.to_csv(file_name, index = False)
