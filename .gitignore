@@ -1,4 +1,20 @@
 
-__pycache__/
-data/
-*.ipynb*/
+## general python dev repo entries
+
+# python c build files
+**/__pycache__
+
+# ipython notebook versioning
+**/.ipynb_checkpoints
+
+# pipenv lock file
+**/Pipfile.lock
+
+# syncthing sync files, versioning
+**/.stfolder
+
+
+## repo specific entries
+
+# data directory
+data/**

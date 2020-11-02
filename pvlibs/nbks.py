@@ -345,8 +345,8 @@ def plot_mlt_fit(db, params):
     # initialise figure and axes
     _w = 9; _h = 6
     fig = plt.figure(figsize = (_w, _h))
-    fig.canvas.layout.width = '{}in'.format(_w)
-    fig.canvas.layout.height= '{}in'.format(_h)
+    #fig.canvas.layout.width = '{}in'.format(_w)
+    #fig.canvas.layout.height= '{}in'.format(_h)
 
     ax = fig.add_subplot(111)
 
@@ -404,11 +404,13 @@ def save_mlt_fit(db, file_name_head, params):
     # iterate all nodes in database
     for _node in db:
 
+        #%matplotlib inline
+
         # initialise figure and axes
         _w = 9; _h = 6
         fig = plt.figure(figsize = (_w, _h))
-        fig.canvas.layout.width = '{}in'.format(_w)
-        fig.canvas.layout.height= '{}in'.format(_h)
+        #fig.canvas.layout.width = '{}in'.format(_w)
+        #fig.canvas.layout.height= '{}in'.format(_h)
 
         ax = fig.add_subplot(111)
 
@@ -621,7 +623,7 @@ def norm_pl_exposure(db, ref_exp = None):
 
 
 
-def save_norm_pl(db, file_name_head, params):
+def save_norm_pl(db, file_name_head, params, trim = False):
 
     ''' Save Normalised PL Images
 
@@ -638,11 +640,17 @@ def save_norm_pl(db, file_name_head, params):
     for node in db:
 
         # build output file name from params
-        file_name = '{}-{}.tif'.format(file_name_head, '-'.join([ node[p] for p in params ]))
+        file_name = '{}-{}.tif'.format(file_name_head, '-'.join([ str(node[p]) for p in params ]))
 
+        # flag use trimmed image
+        if trim:
+            # convert normalised image array to tif image
+            img = PIL.Image.fromarray(node['trim_img'].astype(np.uint16))
 
-        # convert normalised image array to tif image
-        img = PIL.Image.fromarray(node['norm_img'].astype(np.uint16))
+        else:
+            # convert normalised image array to tif image
+            img = PIL.Image.fromarray(node['norm_img'].astype(np.uint16))
+
 
         # save tif image to file
         img.save(file_name)
@@ -653,7 +661,7 @@ def save_norm_pl(db, file_name_head, params):
 
 
 
-def fix_pl(db, params):
+def fix_pl(db, params, raw = False):
 
     ''' Fix PL Images
 
@@ -675,8 +683,12 @@ def fix_pl(db, params):
 
         try:
 
-            # get normalised image data
-            img = node['norm_img']
+
+            if raw:
+                img = node['raw_img']
+            else:
+                # get normalised image data
+                img = node['norm_img']
 
             # rotate (align) and zero (top left) images, crop to wafer area (remove background)
             img = process_data.photoluminescence_image.rotate_zero_image(img,
@@ -726,7 +738,7 @@ def plot_ocpl(db, params):
 
     # diplay images
     _w = 9; _h = 5; fig = plt.figure(figsize = (_w, _h))
-    fig.canvas.layout.width = '{}in'.format(_w); fig.canvas.layout.height= '{}in'.format(_h)
+    #fig.canvas.layout.width = '{}in'.format(_w); fig.canvas.layout.height= '{}in'.format(_h)
     #plt.xticks([]); plt.yticks([])
     ax = []; ax.append(fig.add_subplot(121)); ax.append(fig.add_subplot(122))
 
@@ -746,7 +758,7 @@ def plot_ocpl(db, params):
 
 
 
-def pl_hist_stats(db, params):
+def pl_hist_stats(db, params, trim = False):
 
     ''' Fix PL Images
 
@@ -768,8 +780,13 @@ def pl_hist_stats(db, params):
 
         try:
 
-            # get normalised image data
-            img = node['norm_img']
+
+            if trim:
+                # get trim image data
+                img = node['trim_img']
+            else:
+                # get normalised image data
+                img = node['norm_img']
 
 
             if 'floor' in params.keys():
@@ -815,7 +832,7 @@ def pl_hist_stats(db, params):
 
 
     # discard any nodes where failed to parse parameters by filter on first data entry
-    db = [ d for d in db if 'norm_img' in d.keys() ]
+    db = [ d for d in db if 'hist_bins' in d.keys() ]
 
     print('\n{} measurements processed'.format(len(db)))
 
@@ -843,7 +860,7 @@ def save_pl_hist(db, file_name_head, params):
 
         # diplay images
         _w = 7; _h = 5; fig = plt.figure(figsize = (_w, _h))
-        fig.canvas.layout.width = '{}in'.format(_w); fig.canvas.layout.height= '{}in'.format(_h)
+        #fig.canvas.layout.width = '{}in'.format(_w); fig.canvas.layout.height= '{}in'.format(_h)
         #plt.xticks([]); plt.yticks([])
 
         plt.xlabel('Photoluminescence Intensity (Cnts.)')
@@ -868,7 +885,7 @@ def save_pl_hist(db, file_name_head, params):
         plt.tight_layout()
 
         # build plot output file name from params
-        file_name = '{}-{}.png'.format(file_name_head, '-'.join([ node[p] for p in params ]))
+        file_name = '{}-{}.png'.format(file_name_head, '-'.join([ str(node[p]) for p in params ]))
 
         plt.savefig(file_name)
 
