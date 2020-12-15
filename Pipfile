@@ -18,6 +18,10 @@ seaborn = "*"
 xlrd = "*"
 pyspice = "*"
 scikit-learn = "*"
+pyqt5 = "*"
+hdbscan = "*"
+lmfit = "*"
+pyaudio = "*"
+umap-learn = "*"
+pynndescent = "*"
 
-[requires]
-python_version = "3.8"

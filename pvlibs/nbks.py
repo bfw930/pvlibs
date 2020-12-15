@@ -842,7 +842,7 @@ def pl_hist_stats(db, params, trim = False):
 
 
 
-def save_pl_hist(db, file_name_head, params):
+def save_pl_hist(db, file_name_head, params, bin_lim = None, xlim = None):
 
     ''' Plot and Save PL Histograms
 
@@ -867,9 +867,15 @@ def save_pl_hist(db, file_name_head, params):
         plt.ylabel('Area Fraction')
 
 
+
         x = node['hist_bins']
         hist = node['hist_norm']
         #hist = node['hist_cnts']
+
+        if bin_lim is not None:
+            x = x[bin_lim[0]:bin_lim[1]]
+            hist = hist[bin_lim[0]:bin_lim[1]]
+
 
         # stem plot histogram
         st = plt.stem(x, hist, linefmt = '-', markerfmt = '-', basefmt = 'k-', use_line_collection = True)
@@ -880,6 +886,9 @@ def save_pl_hist(db, file_name_head, params):
         s = node['std']
         plt.vlines([m-s, m+s], 0., np.max(hist)*1.1, colors = 'k', linestyles = '--', alpha = 0.5)
 
+
+        if xlim is not None:
+            plt.xlim( xlim[0], xlim[1] )
 
         # display figure
         plt.tight_layout()
