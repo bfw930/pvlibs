@@ -21,7 +21,6 @@ scikit-learn = "*"
 pyqt5 = "*"
 hdbscan = "*"
 lmfit = "*"
-pyaudio = "*"
 umap-learn = "*"
 pynndescent = "*"
 
