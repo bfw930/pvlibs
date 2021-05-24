@@ -30,7 +30,65 @@ from itertools import groupby
 ''' Current-Voltage File Format Parse Functions '''
 
 
+
 def type_loana(file_path):
+
+    ''' Parse HALM Current-Voltage Format
+
+        Import current-voltage measurement settings and data from a HALM format file
+
+    # inputs
+        _file_path (str): full filepath
+
+    Returns:
+        dict: extracted data and parameters
+    '''
+
+    #res = {}
+
+    # open data file and extract lines
+    with open(file_path, 'r', encoding = 'iso-8859-1') as file:
+
+        lines = file.readlines()
+
+    results = {}
+
+    head_ids = [ i for i in range(len(lines)) if lines[i].startswith('[') ]
+    tail_ids = [ i for i in range(len(lines)) if lines[i].startswith('\n') ]
+    seg_ids = list(zip(head_ids, tail_ids))
+
+    for seg in seg_ids[:]:
+        header = lines[seg[0]].strip('\n[]')
+        results[header] = {}
+        for j in range(seg[0]+1, seg[1]):
+            val = lines[j].strip('\n').split('\t')
+            results[header][val[0][:-1]] = val[1:]
+
+
+    idx = [ i for i in range(len(lines)) if lines[i].startswith('**Data**') ][0] + 1
+    data = np.array([ [ float(l) for l in lines[i].strip('\n').split('\t') ] for i in range(idx, len(lines)) ])
+
+    #print(results.keys())
+    results['Data'] = data
+
+    keep = ['Results', 'Data']
+    #keep = ['Results']
+
+    # only keep desired data
+    #results = { k:v for k,v in results.items() if k in keep }
+
+    #print(results)
+
+
+    #res = { **res, **{ '{}-{}'.format(ff,k):float(v[0]) for k,v in results['Results'].items() if k != 'Model' } }
+
+
+    # return data dict
+    return results
+
+
+
+def type_loana_bak(file_path):
 
     ''' Parse HALM Current-Voltage Format
 
@@ -45,8 +103,10 @@ def type_loana(file_path):
 
     res = {}
 
-    for ff in ['lgt', 'drk', 'jv']:
+    # iterate over loana data files
+    for ff in ['lgt', 'drk', 'jv', ]:
 
+        # open data file and extract lines
         with open(file_path[:-3]+ff, 'r', encoding = 'iso-8859-1') as file:
 
             lines = file.readlines()
@@ -70,10 +130,18 @@ def type_loana(file_path):
 
         results['data'] = data
 
-        keep = ['Results']
+        keep = ['Results',]
+        # only keep desired data
         results = { k:v for k,v in results.items() if k in keep }
 
         #print(results)
+
+
+        #if ff == 'lgt':
+            #print(ff, results['Results']['Intensity'])
+            #ff = '{}-{}'.format(ff,'{}s{}'.format(
+            #    *str(float(results['Results']['Intensity'][0])).split('.')))
+            #print(ff)
 
 
         res = { **res, **{ '{}-{}'.format(ff,k):float(v[0]) for k,v in results['Results'].items() if k != 'Model' } }
@@ -99,8 +167,13 @@ def loana(file_type, file_path, file_name):
     '''
 
     # HALM IV
-    #if file_type == 'jv':
-    if True:
+    if file_type == 'loana-bak':
+    #if True:
+
+        # import raw data from file
+        data = type_loana_bak(file_path = '{}/{}'.format(file_path, file_name))
+
+    elif file_type == 'loana':
 
         # import raw data from file
         data = type_loana(file_path = '{}/{}'.format(file_path, file_name))

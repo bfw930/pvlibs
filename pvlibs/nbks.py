@@ -623,7 +623,7 @@ def norm_pl_exposure(db, ref_exp = None):
 
 
 
-def save_norm_pl(db, file_name_head, params, trim = False):
+def save_norm_pl(db, file_name_head, params, trim = False, png = False):
 
     ''' Save Normalised PL Images
 
@@ -636,11 +636,16 @@ def save_norm_pl(db, file_name_head, params, trim = False):
         (none): images saved to disk
     '''
 
+    if png:
+        fx = 'png'
+    else:
+        fx = 'tif'
+
     # iterate all nodes in database
     for node in db:
 
         # build output file name from params
-        file_name = '{}-{}.tif'.format(file_name_head, '-'.join([ str(node[p]) for p in params ]))
+        file_name = '{}-{}.{}'.format(file_name_head, '-'.join([ str(node[p]) for p in params ]), fx)
 
         # flag use trimmed image
         if trim:

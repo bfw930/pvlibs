@@ -195,6 +195,17 @@ def calc_tau_eff(_opt_vars, _params, _data, _comps, _names):
         rec['tau_srh'] = models.calc_tau_srh(_dn = dn, _N_M = N_M, _t_m0 = t_m0, _t_M0 = t_M0)
 
 
+    # check for blk model component (constant bulk value)
+    if 'blk' in _comps:
+
+        # unpack blk optimisation variables
+        t_blk = _opt_vars[ [ i for i in range(len(_names)) if _names[i] == 't_blk' ][0] ]
+
+        # calculate SRH recombination lifetime
+        rec['tau_blk'] = np.ones(len(dn))
+
+
+
 
     # calculate effective charge carrier lifetime from inverse sum all model component lifetimes
     rec['tau_eff'] = ( sum( [ tau**-1 for tau in rec.values() ] ) )**-1
@@ -339,7 +350,7 @@ def mlt(data):
 
 
     # define new charge density range
-    dn = np.logspace(13, 17, 100)
+    dn = np.logspace(12, 17, 200)
 
     # get charge density dependent values (n_i_eff, tau_aug, tau_rad), assume equal excess electron, hole generation
     n_i_eff, tau_rad, tau_aug = get_nd_dep(_dn = dn, _T = T, _N_D = N_D, _N_A = N_A, _E_c_i = E_c_i, _E_v_i = E_v_i,
@@ -386,6 +397,7 @@ def mlt(data):
     rec['t_sdr'] = rec['tau_sdr'][j]
     rec['t_aug'] = rec['tau_aug'][j]
     rec['t_rad'] = rec['tau_rad'][j]
+    #rec['t_BLK'] = rec['tau_blk'][j]
 
     rec['R2'] = r2
 
