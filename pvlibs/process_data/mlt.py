@@ -349,6 +349,10 @@ def mlt(data):
     r2 = 1 - (ss_res / ss_tot)
 
 
+    if 'rerange' in data.keys():
+        # define new charge density range
+        dn = np.logspace(data['rerange'][0], data['rerange'][1], 300)
+
     # define new charge density range
     dn = np.logspace(12, 17, 200)
 
