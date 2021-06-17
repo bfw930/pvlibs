@@ -349,12 +349,13 @@ def mlt(data):
     r2 = 1 - (ss_res / ss_tot)
 
 
+    # define new charge density range
+    dn = np.logspace(12, 17, 200)
+
     if 'rerange' in data.keys():
         # define new charge density range
         dn = np.logspace(data['rerange'][0], data['rerange'][1], 300)
 
-    # define new charge density range
-    dn = np.logspace(12, 17, 200)
 
     # get charge density dependent values (n_i_eff, tau_aug, tau_rad), assume equal excess electron, hole generation
     n_i_eff, tau_rad, tau_aug = get_nd_dep(_dn = dn, _T = T, _N_D = N_D, _N_A = N_A, _E_c_i = E_c_i, _E_v_i = E_v_i,
