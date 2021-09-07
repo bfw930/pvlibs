@@ -78,8 +78,8 @@ def calc_performance(_data, _params):
 
     ''' open circuit '''
 
-    # calculate Isc from linear regression about -0.2 < V < 0.2
-    j = np.where( (I > -0.5) & (I < 0.5) )
+    # calculate Voc from linear regression about -0.5 < I < 0.5
+    j = np.where( (I >= -3) & (I <= 4) )
     slope, icept, r_value, p_value, std_err = linregress(I[j], V[j])
     Voc = icept
 

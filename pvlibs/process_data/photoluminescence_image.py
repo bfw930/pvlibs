@@ -272,7 +272,7 @@ def rotate_zero_shift_image(_img, _angle_lim = 1.5, _angle_step = 0.1, _edge = .
 
 
 
-def get_diff_image(_img, _ref):
+def get_diff_image(_img, _ref, s = 5):
 
     _pre = _ref
     _post = _img
@@ -283,15 +283,16 @@ def get_diff_image(_img, _ref):
     _post = np.pad(_post, ((0,_shape[0] - _post.shape[0]),(0,_shape[1] - _post.shape[1])), 'constant' )
 
     # get difference and apply median filter
-    _diff = (_post - _pre) / _post
+    #_diff = (_post - _pre) / _post
     #_diff = _post - _pre
+    _diff = _pre - _post
 
-    j = np.where(_diff < 0)
-    _diff[j] = 0
+    #j = np.where(_diff < 0)
+    #_diff[j] = 0
     j = np.where( np.isnan(_diff) )
     _diff[j] = 0
 
-    _diff = ndimage.median_filter(_diff, size = 5)
+    _diff = ndimage.median_filter(_diff, size = s)
 
 
     return _pre, _post, _diff

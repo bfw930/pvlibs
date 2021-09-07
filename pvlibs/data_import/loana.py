@@ -71,11 +71,58 @@ def type_loana(file_path):
     #print(results.keys())
     results['Data'] = data
 
-    keep = ['Results', 'Data']
+
+
+
+    # open data file and extract lines
+    with open(file_path[:-3]+'drk', 'r', encoding = 'iso-8859-1') as file:
+
+        lines = file.readlines()
+
+    dark_results = {}
+
+    head_ids = [ i for i in range(len(lines)) if lines[i].startswith('[') ]
+    tail_ids = [ i for i in range(len(lines)) if lines[i].startswith('\n') ]
+    seg_ids = list(zip(head_ids, tail_ids))
+
+    for seg in seg_ids[:]:
+        header = lines[seg[0]].strip('\n[]')
+        dark_results[header] = {}
+        for j in range(seg[0]+1, seg[1]):
+            val = lines[j].strip('\n').split('\t')
+            dark_results[header][val[0][:-1]] = val[1:]
+
+    results['Dark'] = dark_results
+
+
+
+        # open data file and extract lines
+    with open(file_path[:-3]+'jv', 'r', encoding = 'iso-8859-1') as file:
+
+        lines = file.readlines()
+
+    jv_results = {}
+
+    head_ids = [ i for i in range(len(lines)) if lines[i].startswith('[') ]
+    tail_ids = [ i for i in range(len(lines)) if lines[i].startswith('\n') ]
+    seg_ids = list(zip(head_ids, tail_ids))
+
+    for seg in seg_ids[:]:
+        header = lines[seg[0]].strip('\n[]')
+        jv_results[header] = {}
+        for j in range(seg[0]+1, seg[1]):
+            val = lines[j].strip('\n').split('\t')
+            jv_results[header][val[0][:-1]] = val[1:]
+
+    results['JV'] = jv_results
+
+
+
+    keep = ['Results', 'Data', 'Sample', 'Dark', 'JV']
     #keep = ['Results']
 
     # only keep desired data
-    #results = { k:v for k,v in results.items() if k in keep }
+    results = { k:v for k,v in results.items() if k in keep }
 
     #print(results)
 

@@ -202,7 +202,7 @@ def process_standard(_wafer_doping_type, _wafer_resistivity, _wafer_thickness, _
 
     ''' pseudo-FF calc '''
 
-    if False:
+    if True:
 
         # sort data
         j = np.argsort(ivocs)
