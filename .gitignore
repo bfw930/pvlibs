@@ -13,8 +13,21 @@
 # syncthing sync files, versioning
 **/.stfolder
 
+# python virtual environment
+.venv
+
 
 ## repo specific entries
 
 # data directory
 data/**
+
+# run directory
+run/**
+
+# docs directory
+docs/**
+
+# notebooks run, archive directory
+nbks/run/**
+nbks/archive/**

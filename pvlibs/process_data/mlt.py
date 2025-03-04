@@ -310,7 +310,7 @@ def mlt(data):
         model = {'aug':{}, 'rad':{},
                  'sdr':{'params':['J_0'],
                         'inits':[-14],
-                        'limits':[ [-18, -10] ]},
+                        'limits':[ [-18, -5] ]},
                  'srh':{'params':['t_m0', 't_M0'],
                         'inits':[-4, -4],
                         'limits':[ [-7, -1], [-7, -1] ]},

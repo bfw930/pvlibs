@@ -790,8 +790,13 @@ def pl_hist_stats(db, params, trim = False):
                 # get trim image data
                 img = node['trim_img']
             else:
-                # get normalised image data
-                img = node['norm_img']
+
+                if 'norm_img' in node.keys():
+                    # get normalised image data
+                    img = node['norm_img']
+                else:
+                    # get normalised image data
+                    img = node['raw_img']
 
 
             if 'floor' in params.keys():
@@ -883,7 +888,8 @@ def save_pl_hist(db, file_name_head, params, bin_lim = None, xlim = None):
 
 
         # stem plot histogram
-        st = plt.stem(x, hist, linefmt = '-', markerfmt = '-', basefmt = 'k-', use_line_collection = True)
+        #st = plt.stem(x, hist, linefmt = '-', markerfmt = '-', basefmt = 'k-', use_line_collection = True)
+        st = plt.stem(x, hist, linefmt = '-', markerfmt = '-', basefmt = 'k-')
 
         m = node['med']
         plt.vlines(m, 0., np.max(hist)*1.1, colors = 'r')

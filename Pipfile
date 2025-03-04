@@ -4,23 +4,17 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+ipykernel = "*"
+ipympl = "*"
+ipywidgets = "*"
 
 [packages]
 numpy = "*"
 scipy = "*"
-matplotlib = "*"
 pandas = "*"
-ipykernel = "*"
 openpyxl = "*"
-pillow = "*"
-ipympl = "*"
-seaborn = "*"
-xlrd = "*"
-pyspice = "*"
-scikit-learn = "*"
-pyqt5 = "*"
-hdbscan = "*"
-lmfit = "*"
-umap-learn = "*"
-pynndescent = "*"
-ipywidgets = "*"
+#xlrd = "*"
+#pyqt5 = "*"
+
+[requires]
+python_version = "3.10"

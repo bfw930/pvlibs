@@ -94,7 +94,7 @@ def calc_lifetime(_time, _nd, _illumination, _wafer_optical_const, _wafer_thickn
     ## calculate derevative of charge density with respect to time
 
     # get sampling rate (s)
-    sample_rate = _time.ptp() / (_time.shape[0] - 1)
+    sample_rate = np.ptp(_time) / (_time.shape[0] - 1)
 
     # apply savitzky-golay filter with minimal smoothing, obtain derivative, adjust for sameple rate
     nd_deriv = savgol_filter(_nd, window_length = 21, polyorder = 3, deriv = 1) / sample_rate
@@ -202,7 +202,7 @@ def process_standard(_wafer_doping_type, _wafer_resistivity, _wafer_thickness, _
 
     ''' pseudo-FF calc '''
 
-    if True:
+    if False:
 
         # sort data
         j = np.argsort(ivocs)

@@ -194,6 +194,7 @@ def slt(file_type, file_path, file_name):
 
     # use voltage transient derivatives to trim start and end, remove error values and noise
     if False:
+    #if True:
 
         # select data range
         x = _raw_data['time'].copy()

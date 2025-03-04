@@ -43,9 +43,9 @@ def type_tif(file_path):
     return {'raw_img': np.array( Image.open(file_path) )}
 
 
-def type_tif(file_path):
+def type_png(file_path):
 
-    ''' Parse Photoluminescence Image in TIF file format
+    ''' Parse Photoluminescence Image in PNG file format
 
         Import photoluminescence image data from BT Imaging tool in TIF file format
 
@@ -80,6 +80,12 @@ def ocpl(file_type, file_path, file_name):
 
         # import raw data from file
         data = type_tif(file_path = '{}/{}'.format(file_path, file_name))
+
+    # TIF Photoluminescence Image, BTi
+    if file_type == 'png':
+
+        # import raw data from file
+        data = type_png(file_path = '{}/{}'.format(file_path, file_name))
 
 
     try:

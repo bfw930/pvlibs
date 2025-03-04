@@ -1,0 +1,19 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: pvlibs
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Brendan
+    family-names: Wright
+    email: brendan.wright@unsw.edu.au
+    orcid: 'https://orcid.org/0000-0002-3345-5912'
+    affiliation: University of New South Wales
+repository-code: 'https://github.com/bfw930/pvlibs/tree/v0.5-alpha'
+license: MIT
+version: v0.5-alpha
+date-released: '2024-01-23'
